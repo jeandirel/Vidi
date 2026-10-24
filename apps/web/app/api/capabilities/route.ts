@@ -1,3 +1,4 @@
+import { billingConfigured } from '@/lib/billing';
 import { llmConfigured, guestScriptsEnabled } from '@/lib/llm';
 export async function GET() {
   return Response.json({
@@ -11,7 +12,7 @@ export async function GET() {
       process.env.REDIS_URL
     ),
     storage: !!process.env.S3_BUCKET,
-    billing: false,
+    billing: billingConfigured(),
     trends: false,
     ecommerce: false,
     voiceCloning: false,

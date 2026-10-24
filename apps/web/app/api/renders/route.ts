@@ -13,7 +13,7 @@ const schema = z.object({
 export async function GET(request: Request) {
   try {
     const workspaceId = new URL(request.url).searchParams.get('workspaceId') || '';
-    await requireWorkspace(workspaceId);
+    await requireWorkspace(workspaceId, false, request);
     return Response.json({
       renders: await db.render.findMany({
         where: { workspaceId },
@@ -36,9 +36,9 @@ export async function GET(request: Request) {
 }
 export async function POST(request: Request) {
   try {
-    checkOrigin(request);
+    checkOrigin(request, true);
     const input = schema.parse(await jsonBody(request));
-    const workspace = await requireWorkspace(input.workspaceId, true);
+    const workspace = await requireWorkspace(input.workspaceId, true, request);
     await rateLimit(`renders:${workspace.id}`, 10, 60);
     const previous = await db.render.findUnique({
       where: {
@@ -64,9 +64,11 @@ export async function POST(request: Request) {
         'Le moteur vidéo doit être connecté avant de lancer un rendu. Aucun crédit n’a été utilisé.',
       );
     const project = await db.project.findFirst({
-      where: { id: input.projectId, workspaceId: workspace.id },
+      where: { id: input.projectId, workspaceId: workspace.id, archivedAt: null },
     });
     if (!project) throw new ApiError(404, 'Projet introuvable.');
+    if (project.requiresApproval && project.reviewStatus !== 'APPROVED')
+      throw new ApiError(409, 'La validation de cette version doit être terminée avant le rendu.');
     const snapshot = projectSchema.parse(project.data);
     const plan = workspace.plan as keyof typeof plans;
     if (!(plan in plans) || !canRender(plan, snapshot.resolution))

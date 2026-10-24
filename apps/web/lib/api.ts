@@ -33,7 +33,12 @@ export async function jsonBody(request: Request) {
     throw new ApiError(400, 'JSON invalide.');
   }
 }
-export function checkOrigin(request: Request) {
+export function checkOrigin(request: Request, allowApiKey = false) {
+  if (
+    allowApiKey &&
+    /^Bearer vi_key_[a-f0-9]{64}$/.test(request.headers.get('authorization') || '')
+  )
+    return;
   const origin = request.headers.get('origin');
   // Next.js can normalize request.url to its listening hostname. Browsers send
   // the public request host in Host; never trust arbitrary X-Forwarded-Host here.

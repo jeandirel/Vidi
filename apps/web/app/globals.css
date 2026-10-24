@@ -2745,3 +2745,89 @@ h1 {
     margin-left: auto;
   }
 }
+.workspace-console {
+  margin-bottom: 25px;
+}
+.management-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.management-form {
+  display: flex;
+  gap: 14px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  padding: 20px 0;
+  border-top: 1px solid var(--line);
+  margin-top: 20px;
+}
+.management-form .field {
+  flex: 1;
+  min-width: 160px;
+  margin-bottom: 0;
+}
+.management-form > .button {
+  margin-bottom: 1px;
+}
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding: 14px 0;
+}
+.member-row > div {
+  flex: 1;
+  min-width: 0;
+}
+.member-row strong {
+  font-size: 12px;
+}
+.member-row small {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+}
+.member-row select {
+  font-size: 10px;
+  max-width: 145px;
+  padding: 8px;
+}
+.secret-output {
+  border: 1px solid #564566;
+  background: #201c28;
+  padding: 15px;
+  border-radius: 8px;
+  margin: 15px 0;
+}
+.secret-output .text-button {
+  margin-right: 20px;
+}
+.secret-output textarea,
+.secret-output input {
+  font-family: monospace;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.project-review {
+  margin: 25px 0;
+}
+.project-review h2 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.project-review .service-row {
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.editor-fieldset {
+  padding: 0;
+  margin: 0;
+  border: 0;
+  min-width: 0;
+}

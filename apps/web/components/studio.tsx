@@ -15,6 +15,10 @@ import Icon from './icon';
 import CreationPanel from './creation-panel';
 import Preview from './preview';
 import AccountDialog from './account-dialog';
+import { api } from '@/lib/client-api';
+import WorkspaceConsole from './workspace-console';
+import ProjectReview from './project-review';
+import AssetLibrary from './asset-library';
 
 type View = 'studio' | 'projects' | 'avatars' | 'renders' | 'settings' | 'plans';
 export type Workspace = { id: string; name: string; credits: number; plan: string; role: string };
@@ -42,16 +46,6 @@ type Render = {
   error: string | null;
   createdAt: string;
 };
-export async function api<T>(url: string, body?: unknown, method = 'POST'): Promise<T> {
-  const response = await fetch(url, {
-    ...(body !== undefined
-      ? { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
-      : {}),
-  });
-  const result = await response.json();
-  if (!response.ok) throw new Error(result.error || 'Une erreur est survenue.');
-  return result;
-}
 const steps = [
   { label: 'Produit', icon: 'link' },
   { label: 'Script', icon: 'type' },
@@ -74,6 +68,9 @@ export default function Studio() {
   const [draftId, setDraftId] = useState('');
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [cloudId, setCloudId] = useState<string | null>(null);
+  const [cloudRevision, setCloudRevision] = useState(0);
+  const [cloudDirty, setCloudDirty] = useState(true);
+  const [inviteToken, setInviteToken] = useState('');
   const [session, setSession] = useState<Session | null>(null);
   const [workspaceId, setWorkspaceId] = useState('');
   const [capabilities, setCapabilities] = useState<Capabilities | null>(null);
@@ -88,6 +85,7 @@ export default function Studio() {
   const renderKey = useRef<string | null>(null);
   const workspace = session?.workspaces.find((w) => w.id === workspaceId);
   function update(next: ProjectInput) {
+    setCloudDirty(true);
     setProject(next);
     setSaved(false);
     renderKey.current = null;
@@ -105,6 +103,7 @@ export default function Studio() {
     }
   }
   useEffect(() => {
+    setInviteToken(new URLSearchParams(window.location.search).get('invite') || '');
     setDrafts(loadDrafts());
     setDraftId(crypto.randomUUID());
     void refreshSession();
@@ -177,9 +176,14 @@ export default function Studio() {
     }
     projectSchema.parse(project);
     const result = cloudId
-      ? await api<{ id: string }>(`/api/projects/${cloudId}`, project, 'PUT')
-      : await api<{ id: string }>('/api/projects', { workspaceId, data: project });
+      ? await api<{ id: string; revision: number }>(`/api/projects/${cloudId}`, project, 'PUT')
+      : await api<{ id: string; revision: number }>('/api/projects', {
+          workspaceId,
+          data: project,
+        });
     setCloudId(result.id);
+    setCloudRevision(result.revision);
+    setCloudDirty(false);
     return result.id;
   }
   async function generateScript(ai = false) {
@@ -437,6 +441,37 @@ export default function Studio() {
           </div>
         </header>
         <main>
+          {inviteToken ? (
+            <section className="info-banner">
+              <Icon name="users" />
+              <div>
+                <p>Une invitation à rejoindre un espace est disponible.</p>
+                <button
+                  className="button secondary compact"
+                  onClick={async () => {
+                    if (!session) {
+                      setAccountOpen(true);
+                      return;
+                    }
+                    try {
+                      const r = await api<{ workspaceId: string }>('/api/invitations/accept', {
+                        token: inviteToken,
+                      });
+                      await refreshSession();
+                      setWorkspaceId(r.workspaceId);
+                      setInviteToken('');
+                      window.history.replaceState({}, '', window.location.pathname);
+                      setNotice('Vous avez rejoint l’espace.');
+                    } catch (e) {
+                      setNotice((e as Error).message);
+                    }
+                  }}
+                >
+                  Accepter avec mon compte
+                </button>
+              </div>
+            </section>
+          ) : null}
           {view === 'studio' ? (
             <>
               <section className="page-heading">
@@ -467,6 +502,7 @@ export default function Studio() {
                   <div className="project-title">
                     <input
                       aria-label="Titre du projet"
+                      disabled={!!busy}
                       value={project.title}
                       maxLength={120}
                       onChange={(e) => update({ ...project, title: e.target.value })}
@@ -499,17 +535,19 @@ export default function Studio() {
                     ))}
                   </div>
                   <div role="tabpanel" id={`panel-${step}`} aria-labelledby={`tab-${step}`}>
-                    <CreationPanel
-                      step={step}
-                      workspaceId={workspaceId}
-                      onLogin={() => setAccountOpen(true)}
-                      project={project}
-                      update={update}
-                      busy={busy}
-                      onCompose={() => void generateScript()}
-                      onAI={() => void generateScript(true)}
-                      notify={setNotice}
-                    />
+                    <fieldset className="editor-fieldset" disabled={!!busy}>
+                      <CreationPanel
+                        step={step}
+                        workspaceId={workspaceId}
+                        onLogin={() => setAccountOpen(true)}
+                        project={project}
+                        update={update}
+                        busy={busy}
+                        onCompose={() => void generateScript()}
+                        onAI={() => void generateScript(true)}
+                        notify={setNotice}
+                      />
+                    </fieldset>
                   </div>
                   <div className="editor-footer">
                     <span>
@@ -556,6 +594,15 @@ export default function Studio() {
                   videoConnected={!!capabilities?.video}
                 />
               </div>
+              {cloudId && workspace ? (
+                <ProjectReview
+                  key={`${cloudId}:${cloudRevision}`}
+                  projectId={cloudId}
+                  role={workspace.role}
+                  dirty={cloudDirty}
+                  notify={setNotice}
+                />
+              ) : null}
               <div className="studio-note">
                 <Icon name="sparkles" size={16} />
                 <span>
@@ -672,6 +719,7 @@ export default function Studio() {
                         onClick={() => {
                           setProject(p.data);
                           setCloudId(p.id);
+                          setCloudDirty(false);
                           setDraftId(crypto.randomUUID());
                           setSaved(false);
                           setStep(0);
@@ -812,6 +860,20 @@ export default function Studio() {
                   </button>
                 ) : null}
               </section>
+              {workspace ? (
+                <WorkspaceConsole
+                  workspace={workspace}
+                  notify={setNotice}
+                  refresh={refreshSession}
+                />
+              ) : null}
+              {workspace ? (
+                <AssetLibrary
+                  workspaceId={workspace.id}
+                  canWrite={workspace.role !== 'VIEWER'}
+                  notify={setNotice}
+                />
+              ) : null}
               <div className="settings-grid">
                 <section className="panel">
                   <h2>Compte & espace de travail</h2>
@@ -902,6 +964,21 @@ export default function Studio() {
                   <p>Une offre pour chaque étape de votre production.</p>
                 </div>
               </section>
+              {workspace && capabilities?.billing ? (
+                <button
+                  className="button secondary compact"
+                  onClick={async () => {
+                    try {
+                      const r = await api<{ url: string }>('/api/billing/portal', { workspaceId });
+                      window.location.assign(r.url);
+                    } catch (e) {
+                      setNotice((e as Error).message);
+                    }
+                  }}
+                >
+                  Gérer mon abonnement
+                </button>
+              ) : null}
               <div className="pricing-grid">
                 {Object.entries(plans).map(([key, p]) => (
                   <article className={`pricing-card ${key === 'pro' ? 'featured' : ''}`} key={key}>
@@ -930,13 +1007,28 @@ export default function Studio() {
                     </ul>
                     <button
                       className={`button ${key === 'pro' ? 'primary' : 'secondary'}`}
-                      onClick={() =>
-                        setNotice(
-                          'Les abonnements ne sont pas encore ouverts. Aucun paiement ne sera demandé.',
-                        )
-                      }
+                      disabled={!capabilities?.billing || !!busy}
+                      onClick={async () => {
+                        if (!session || !workspace) {
+                          setAccountOpen(true);
+                          return;
+                        }
+                        setBusy('checkout');
+                        try {
+                          const r = await api<{ url: string }>('/api/billing/checkout', {
+                            workspaceId,
+                            plan: key,
+                          });
+                          window.location.assign(r.url);
+                        } catch (e) {
+                          setNotice((e as Error).message);
+                        } finally {
+                          setBusy('');
+                        }
+                      }}
                     >
-                      Bientôt disponible <Icon name="next" size={15} />
+                      {capabilities?.billing ? 'Choisir cette offre' : 'Bientôt disponible'}{' '}
+                      <Icon name="next" size={15} />
                     </button>
                   </article>
                 ))}

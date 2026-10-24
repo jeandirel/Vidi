@@ -23,6 +23,8 @@ model User {
   passwordHash String
   sessions Session[]
   memberships Membership[]
+  apiKeys ApiKey[]
+  reviews ProjectReview[]
   createdAt DateTime @default(now())
 }
 model Session {
@@ -42,6 +44,10 @@ model Workspace {
   projects Project[]
   renders Render[]
   ledger CreditEntry[]
+  apiKeys ApiKey[]
+  invitations Invitation[]
+  assets Asset[]
+  subscription Subscription?
   createdAt DateTime @default(now())
 }
 model Membership {
@@ -59,6 +65,11 @@ model Project {
   title String
   data Json
   renders Render[]
+  revision Int @default(1)
+  reviewStatus ReviewStatus @default(DRAFT)
+  requiresApproval Boolean @default(false)
+  archivedAt DateTime?
+  reviews ProjectReview[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@index([workspaceId,updatedAt])
@@ -92,4 +103,80 @@ model CreditEntry {
   createdAt DateTime @default(now())
   @@unique([renderId,reason])
   @@index([workspaceId,createdAt])
+}
+
+enum ReviewStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  CHANGES_REQUESTED
+}
+model ApiKey {
+  id String @id @default(cuid())
+  name String
+  prefix String
+  tokenHash String @unique
+  workspaceId String
+  workspace Workspace @relation(fields:[workspaceId],references:[id],onDelete:Cascade)
+  userId String
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  role Role @default(VIEWER)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([workspaceId,createdAt])
+}
+model Invitation {
+  id String @id @default(cuid())
+  workspaceId String
+  workspace Workspace @relation(fields:[workspaceId],references:[id],onDelete:Cascade)
+  email String
+  role Role @default(VIEWER)
+  tokenHash String @unique
+  expiresAt DateTime
+  acceptedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([workspaceId,expiresAt])
+}
+model ProjectReview {
+  id String @id @default(cuid())
+  projectId String
+  project Project @relation(fields:[projectId],references:[id],onDelete:Cascade)
+  authorId String
+  author User @relation(fields:[authorId],references:[id],onDelete:Cascade)
+  revision Int
+  decision ReviewStatus
+  message String
+  createdAt DateTime @default(now())
+  @@index([projectId,createdAt])
+}
+model Asset {
+  id String @id @default(cuid())
+  workspaceId String
+  workspace Workspace @relation(fields:[workspaceId],references:[id],onDelete:Cascade)
+  key String @unique
+  name String
+  mime String
+  size Int
+  confirmedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([workspaceId,createdAt])
+}
+model Subscription {
+  id String @id @default(cuid())
+  workspaceId String @unique
+  workspace Workspace @relation(fields:[workspaceId],references:[id],onDelete:Cascade)
+  customerId String @unique
+  stripeId String? @unique
+  status String @default("pending")
+  checkoutKey String?
+  checkoutPlan String?
+  checkoutSessionId String?
+  checkoutLockedUntil DateTime?
+  updatedAt DateTime @updatedAt
+}
+model BillingEvent {
+  id String @id
+  type String
+  createdAt DateTime @default(now())
 }
