@@ -1,7 +1,9 @@
+import { llmConfigured, guestScriptsEnabled } from '@/lib/llm';
 export async function GET() {
   return Response.json({
     database: !!process.env.DATABASE_URL,
-    scripts: !!(process.env.OPENAI_API_KEY && process.env.OPENAI_MODEL),
+    scripts: llmConfigured(),
+    guestScripts: guestScriptsEnabled(),
     video: !!(
       process.env.VIDEO_GATEWAY_URL &&
       process.env.VIDEO_GATEWAY_TOKEN &&

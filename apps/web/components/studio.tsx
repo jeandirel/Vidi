@@ -23,6 +23,7 @@ export type Session = {
   workspaces: Workspace[];
 };
 type Capabilities = {
+  guestScripts: boolean;
   database: boolean;
   scripts: boolean;
   video: boolean;
@@ -190,13 +191,14 @@ export default function Studio() {
         setNotice('Brouillon composé à partir de vos informations. Relisez-le avant publication.');
         return;
       }
-      if (!session) {
+      if (!session && !capabilities?.guestScripts) {
         setAccountOpen(true);
         return;
       }
       setBusy('script');
       const result = await api<{ script: ProjectInput['script'] }>('/api/scripts', {
         workspaceId,
+        dataConsent: true,
         product,
         language: project.language,
         duration: project.duration,

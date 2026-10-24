@@ -11,6 +11,7 @@
     "@aws-sdk/client-s3": "^3.900.0",
     "@aws-sdk/s3-request-presigner": "^3.900.0",
     "@next/env": "^16.4.3",
+    "@vercel/oidc": "^4.0.3",
     "@vidi/core": "*",
     "@vidi/db": "*",
     "bullmq": "^5.61.0",
