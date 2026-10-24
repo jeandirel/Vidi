@@ -1,0 +1,79 @@
+import {
+  canRender,
+  composeDraft,
+  productSchema,
+  projectSchema,
+  renderCost,
+  scriptSeconds,
+} from '@vidi/core';
+const product = {
+  name: 'Lumé',
+  description: 'Un sérum hydratant rechargeable.',
+  benefits: ['Texture légère'],
+  url: '',
+  audience: 'Peaux sèches',
+  image: '',
+};
+const base = {
+  title: 'Campagne Lumé',
+  product,
+  script: composeDraft(product),
+  avatarId: 'lea',
+  voiceId: 'claire',
+  language: 'fr',
+  emotion: 'warm',
+  duration: 15,
+  resolution: '720p',
+  captions: true,
+  clips: [],
+} as const;
+test.each([
+  [15, '720p', 1],
+  [30, '720p', 2],
+  [60, '1080p', 8],
+  [15, '4k', 4],
+  [60, '4k', 16],
+] as const)('pricing duration %i / %s costs %i credits', (duration, resolution, cost) =>
+  expect(renderCost(duration, resolution)).toBe(cost),
+);
+test('plan restrictions are enforced independently of client settings', () => {
+  expect(canRender('starter', '1080p')).toBe(false);
+  expect(canRender('pro', '4k')).toBe(false);
+  expect(canRender('agency', '4k')).toBe(true);
+});
+test('a composition draft only uses supplied facts, without fake testimonials', () => {
+  const result = composeDraft(product);
+  expect(result.body).toBe('Un sérum hydratant rechargeable. Texture légère');
+  expect(result.hook).toBe('Découvrez Lumé.');
+  expect(JSON.stringify(result)).not.toMatch(/j’ai|miracle|garanti|avis/i);
+});
+test('hostile URL schemes and SVG data URIs are rejected', () => {
+  expect(productSchema.safeParse({ ...product, url: 'javascript:alert(1)' }).success).toBe(false);
+  expect(
+    productSchema.safeParse({ ...product, image: 'data:image/svg+xml;base64,AAAA' }).success,
+  ).toBe(false);
+});
+test('timeline segments cannot extend beyond the project duration', () => {
+  expect(
+    projectSchema.safeParse({
+      ...base,
+      clips: [{ id: 'a', kind: 'avatar', label: 'Avatar', start: 10, duration: 10 }],
+    }).success,
+  ).toBe(false);
+  expect(
+    projectSchema.safeParse({
+      ...base,
+      clips: [{ id: 'a', kind: 'avatar', label: 'Avatar', start: 5, duration: 10 }],
+    }).success,
+  ).toBe(true);
+});
+test('duration estimate warns on scripts too long for a fifteen second cut', () => {
+  expect(
+    scriptSeconds({ hook: 'Bonjour', body: Array(70).fill('mot').join(' '), cta: 'Découvrez' }),
+  ).toBeGreaterThan(15);
+});
+test('empty projects cannot be saved as production-ready projects', () => {
+  expect(
+    projectSchema.safeParse({ ...base, script: { hook: '', body: '', cta: '' } }).success,
+  ).toBe(false);
+});

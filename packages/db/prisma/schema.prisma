@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+enum Role {
+  OWNER
+  EDITOR
+  VIEWER
+}
+enum RenderStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+model User {
+  id String @id @default(cuid())
+  email String @unique
+  name String
+  passwordHash String
+  sessions Session[]
+  memberships Membership[]
+  createdAt DateTime @default(now())
+}
+model Session {
+  id String @id @default(cuid())
+  tokenHash String @unique
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  @@index([expiresAt])
+}
+model Workspace {
+  id String @id @default(cuid())
+  name String
+  plan String @default("starter")
+  credits Int @default(0)
+  memberships Membership[]
+  projects Project[]
+  renders Render[]
+  ledger CreditEntry[]
+  createdAt DateTime @default(now())
+}
+model Membership {
+  userId String
+  workspaceId String
+  role Role @default(VIEWER)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  @@id([userId,workspaceId])
+}
+model Project {
+  id String @id @default(cuid())
+  workspaceId String
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  title String
+  data Json
+  renders Render[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([workspaceId,updatedAt])
+}
+model Render {
+  id String @id @default(cuid())
+  workspaceId String
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  projectId String
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  idempotencyKey String
+  input Json
+  credits Int
+  status RenderStatus @default(QUEUED)
+  outputUrl String?
+  error String?
+  ledger CreditEntry[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([workspaceId,idempotencyKey])
+  @@index([workspaceId,status])
+}
+model CreditEntry {
+  id String @id @default(cuid())
+  workspaceId String
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  renderId String?
+  render Render? @relation(fields: [renderId], references: [id])
+  amount Int
+  reason String
+  createdAt DateTime @default(now())
+  @@unique([renderId,reason])
+  @@index([workspaceId,createdAt])
+}
