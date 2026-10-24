@@ -41,3 +41,26 @@ test('untrusted internal errors do not leak credentials to API clients', async (
   expect(JSON.stringify(await response.json())).not.toContain('secret');
   spy.mockRestore();
 });
+
+test('origin validation uses the incoming Host when Next normalizes its listening URL', () => {
+  expect(() =>
+    checkOrigin(
+      new Request('http://localhost:3000/api/auth/register', {
+        method: 'POST',
+        headers: { host: '127.0.0.1:3000', origin: 'http://127.0.0.1:3000' },
+      }),
+    ),
+  ).not.toThrow();
+  expect(() =>
+    checkOrigin(
+      new Request('https://vidi.test/api/auth/register', {
+        method: 'POST',
+        headers: {
+          host: 'vidi.test',
+          origin: 'https://evil.test',
+          'x-forwarded-host': 'evil.test',
+        },
+      }),
+    ),
+  ).toThrow(ApiError);
+});

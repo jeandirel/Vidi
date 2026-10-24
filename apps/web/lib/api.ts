@@ -35,8 +35,12 @@ export async function jsonBody(request: Request) {
 }
 export function checkOrigin(request: Request) {
   const origin = request.headers.get('origin');
-  if (!origin || origin !== new URL(request.url).origin)
-    throw new ApiError(403, 'Origine non autorisée.');
+  // Next.js can normalize request.url to its listening hostname. Browsers send
+  // the public request host in Host; never trust arbitrary X-Forwarded-Host here.
+  const destination = new URL(request.url);
+  const host = request.headers.get('host');
+  if (host) destination.host = host;
+  if (!origin || origin !== destination.origin) throw new ApiError(403, 'Origine non autorisée.');
 }
 export function errorResponse(error: unknown) {
   if (error instanceof ApiError)
