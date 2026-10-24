@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import { scriptSeconds, scriptWords, type Clip, type ProjectInput } from '@vidi/core';
 import { avatars, voices } from '@/lib/catalog';
 import Icon from './icon';
+import ProductImport from './product-import';
 type Props = {
   step: number;
   project: ProjectInput;
@@ -11,6 +12,8 @@ type Props = {
   onCompose: () => void;
   onAI: () => void;
   notify: (s: string) => void;
+  workspaceId: string;
+  onLogin: () => void;
 };
 export default function CreationPanel({
   step,
@@ -20,6 +23,8 @@ export default function CreationPanel({
   onCompose,
   onAI,
   notify,
+  workspaceId,
+  onLogin,
 }: Props) {
   const upload = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -143,10 +148,32 @@ export default function CreationPanel({
               />
             </div>
           </label>
-          <p className="field-help">
-            Conservez le lien source. L’import automatique e-commerce sera connecté dans une
-            prochaine étape.
-          </p>
+          <ProductImport
+            url={p.product.url}
+            workspaceId={workspaceId}
+            onLogin={onLogin}
+            notify={notify}
+            onApply={(imported) => {
+              update({
+                ...p,
+                title:
+                  p.title === 'Nouvelle création' || p.title === p.product.name
+                    ? imported.name
+                    : p.title,
+                product: {
+                  name: imported.name,
+                  description: imported.description,
+                  url: imported.url,
+                  image: imported.image,
+                  benefits: [],
+                  audience: '',
+                },
+                script: { hook: '', body: '', cta: '' },
+              });
+              notify('Fiche appliquée. Vérifiez les détails, puis composez votre script.');
+            }}
+          />
+
           <div className="divider">
             <span>LES DÉTAILS QUI COMPTENT</span>
           </div>
@@ -207,7 +234,7 @@ export default function CreationPanel({
                     update({
                       ...p,
                       title:
-                        p.title === 'Nouvelle création'
+                        p.title === 'Nouvelle création' || p.title === p.product.name
                           ? e.target.value || 'Nouvelle création'
                           : p.title,
                       product: { ...p.product, name: e.target.value },

@@ -32,6 +32,12 @@ Créer un compte depuis « Mon espace ». Les mots de passe sont dérivés avec 
 - Uploads : endpoint S3/R2 présigné ; configurer le bucket privé, les identifiants IAM et la politique CORS. L’interface utilise actuellement une image locale (1 Mo max).
 - Webhook sortant : `WEBHOOK_URL` et `WEBHOOK_SECRET`, configurés uniquement par l’opérateur. Ce webhook est global à l’instance, destiné à son backend de confiance ; il ne s’agit pas encore d’un abonnement webhook par client.
 
+## Importer une fiche produit
+
+Dans le studio, coller une URL HTTPS puis cliquer sur **Importer la fiche**. Cette opération nécessite un compte cloud et Redis pour les quotas. Vidi lit les métadonnées JSON-LD Product ou Open Graph ; il n’exécute pas les scripts du site et ne se connecte pas au compte boutique. Les informations sont présentées pour vérification avant application. L’image est optionnelle ; les bénéfices et témoignages ne sont pas déduits ou inventés. Appliquer une nouvelle fiche efface le script précédent pour éviter de l’associer au mauvais produit.
+
+Cette fonction n’est pas encore une synchronisation Shopify/WooCommerce via OAuth. Les pages privées, les pages nécessitant JavaScript, les réponses compressées imposées et les pages de plus de 1 Mo peuvent être refusées. Les connexions sortantes bloquent les IP privées, les IP littérales, les ports non standard et les redirections internes.
+
 ## Structure
 
 ```text

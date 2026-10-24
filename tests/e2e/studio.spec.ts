@@ -8,7 +8,8 @@ test('create, edit, save, reload and duplicate a local campaign', async ({ page 
     page.getByRole('heading', { name: 'Une idée. Votre prochaine vidéo.' }),
   ).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('studio-desktop.png'), fullPage: true });
-  await page.getByRole('textbox', { name: 'Nom du produit' }).fill('Lumé');
+  await page.getByRole('textbox', { name: 'Nom du produit' }).pressSequentially('Lumé');
+  await expect(page.getByRole('textbox', { name: 'Titre du projet' })).toHaveValue('Lumé');
   await page
     .getByRole('textbox', { name: 'Description du produit' })
     .fill('Un sérum hydratant avec un flacon rechargeable.');
@@ -81,4 +82,62 @@ test('unconfigured services report their state and never return invented video U
     headers: { Origin: 'https://evil.test' },
   });
   expect(rejected.status()).toBe(403);
+});
+
+test('product import requires review and only applies after confirmation (mocked shop response)', async ({
+  page,
+}) => {
+  await page.route('**/api/auth/session', (route) =>
+    route.fulfill({
+      json: {
+        user: { id: 'user-import', name: 'Import Tester', email: 'tester@example.com' },
+        workspaces: [
+          { id: 'workspace-import', name: 'Test Shop', plan: 'starter', credits: 0, role: 'OWNER' },
+        ],
+      },
+    }),
+  );
+  await page.route('**/api/products/import', async (route) => {
+    expect(route.request().postDataJSON()).toEqual({
+      workspaceId: 'workspace-import',
+      url: 'https://shop.example.com/serum',
+    });
+    await route.fulfill({
+      json: {
+        product: {
+          name: 'Sérum importé',
+          description: 'Un produit avec une description vérifiée.',
+          image: 'https://cdn.example.com/photo.jpg',
+          url: 'https://shop.example.com/serum',
+          source: 'structured-data',
+          notes: ['Vérifiez les informations avant de les appliquer.'],
+        },
+      },
+    });
+  });
+  await page.goto('/');
+  await expect(page.locator('.app')).toHaveAttribute('data-ready', 'true');
+  await expect(page.getByRole('button', { name: /Import Tester Compte personnel/ })).toBeVisible();
+  await page.getByRole('textbox', { name: 'Nom du produit' }).fill('Produit précédent');
+  await page
+    .getByRole('textbox', { name: 'Description du produit' })
+    .fill('Une description précédente à conserver avant confirmation.');
+  await page.getByRole('button', { name: 'Composer mon premier brouillon' }).click();
+  await page.getByRole('tab', { name: '1 Produit' }).click();
+  await page
+    .getByRole('textbox', { name: 'Lien du produit Facultatif' })
+    .fill('https://shop.example.com/serum');
+  await page.getByRole('button', { name: 'Importer la fiche' }).click();
+  await expect(page.getByRole('region', { name: 'Informations récupérées' })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Nom du produit' })).toHaveValue(
+    'Produit précédent',
+  );
+  await page.getByRole('button', { name: 'Appliquer à mon projet' }).click();
+  await expect(page.getByRole('textbox', { name: 'Nom du produit' })).toHaveValue('Sérum importé');
+  await expect(page.getByRole('textbox', { name: 'Description du produit' })).toHaveValue(
+    'Un produit avec une description vérifiée.',
+  );
+  await expect(page.getByAltText('Votre produit', { exact: true })).toHaveCount(0);
+  await page.getByRole('tab', { name: '2 Script' }).click();
+  await expect(page.getByRole('textbox', { name: 'L’accroche', exact: true })).toHaveValue('');
 });

@@ -499,6 +499,8 @@ export default function Studio() {
                   <div role="tabpanel" id={`panel-${step}`} aria-labelledby={`tab-${step}`}>
                     <CreationPanel
                       step={step}
+                      workspaceId={workspaceId}
+                      onLogin={() => setAccountOpen(true)}
                       project={project}
                       update={update}
                       busy={busy}

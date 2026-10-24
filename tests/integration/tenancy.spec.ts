@@ -51,6 +51,21 @@ test('real PostgreSQL/Redis: cookie auth, tenant isolation, credit atomicity and
     expect(created.status()).toBe(201);
     const project = await created.json();
     expect((await b.get(`/api/projects/${project.id}`)).status()).toBe(404);
+    expect(
+      (
+        await b.post('/api/products/import', {
+          data: { workspaceId, url: 'https://shop.example.com/p' },
+        })
+      ).status(),
+    ).toBe(404);
+    expect(
+      (
+        await a.post('/api/products/import', {
+          data: { workspaceId, url: 'https://127.0.0.1/private' },
+        })
+      ).status(),
+    ).toBe(400);
+
     expect((await b.get(`/api/projects?workspaceId=${workspaceId}`)).status()).toBe(404);
     expect((await b.put(`/api/projects/${project.id}`, { data })).status()).toBe(404);
     const key = crypto.randomUUID();
