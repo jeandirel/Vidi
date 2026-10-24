@@ -16,7 +16,7 @@ export function redisOptions() {
   };
 }
 export function renderQueue() {
-  return new Queue('vidi-renders', {
+  const queue = new Queue('vidi-renders', {
     connection: redisOptions(),
     defaultJobOptions: {
       attempts: 3,
@@ -25,4 +25,6 @@ export function renderQueue() {
       removeOnFail: 1000,
     },
   });
+  queue.on('error', () => console.error('Render queue unavailable'));
+  return queue;
 }

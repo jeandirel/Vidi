@@ -25,6 +25,8 @@ const gateway = new URL(process.env.VIDEO_GATEWAY_URL!);
 if (gateway.protocol !== 'https:') throw new Error('VIDEO_GATEWAY_URL must use HTTPS.');
 const queue = new Queue('vidi-renders', { connection });
 const notifications = new Queue('vidi-webhooks', { connection });
+queue.on('error', () => console.error('Render dispatcher connection error'));
+notifications.on('error', () => console.error('Webhook queue connection error'));
 const allowedHosts = process.env
   .VIDEO_OUTPUT_HOSTS!.split(',')
   .map((s) => s.trim())

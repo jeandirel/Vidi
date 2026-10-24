@@ -2,7 +2,7 @@ name: Vidi CI
 on:
   pull_request:
   push:
-    branches: [main, codex/vidi-studio]
+    branches: [main]
 permissions:
   contents: read
 concurrency:

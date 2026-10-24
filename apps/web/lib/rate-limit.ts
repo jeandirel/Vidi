@@ -9,6 +9,7 @@ export async function rateLimit(key: string, limit = 10, window = 60) {
     connectTimeout: 3000,
     lazyConnect: true,
   });
+  redis.on('error', () => console.error('Rate limiting service unavailable'));
   try {
     const count = Number(
       await redis.eval(
