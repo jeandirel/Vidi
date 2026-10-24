@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { randomBytes, randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { db } from '@vidi/db';
 import { plans } from '@vidi/core';
 import { requireOwner } from '@/lib/auth';
@@ -94,7 +94,7 @@ export async function POST(request: Request) {
         line_items: [{ price: price.id, quantity: 1 }],
         metadata: { workspaceId: input.workspaceId },
         subscription_data: { metadata: { workspaceId: input.workspaceId } },
-        integration_identifier: `vidi_${randomBytes(4).toString('hex').replace(/[0-9]/g, 'a')}`,
+        integration_identifier: `vidi_${createHash('sha256').update(nonce).digest('hex').slice(0, 8).replace(/[0-9]/g, 'a')}`,
         success_url: `${origin}/?billing=success`,
         cancel_url: `${origin}/?billing=cancelled`,
       },
