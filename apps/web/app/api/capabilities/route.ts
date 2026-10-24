@@ -1,7 +1,10 @@
+import { billingConfigured } from '@/lib/billing';
+import { llmConfigured, guestScriptsEnabled } from '@/lib/llm';
 export async function GET() {
   return Response.json({
     database: !!process.env.DATABASE_URL,
-    scripts: !!(process.env.OPENAI_API_KEY && process.env.OPENAI_MODEL),
+    scripts: llmConfigured(),
+    guestScripts: guestScriptsEnabled(),
     video: !!(
       process.env.VIDEO_GATEWAY_URL &&
       process.env.VIDEO_GATEWAY_TOKEN &&
@@ -9,7 +12,7 @@ export async function GET() {
       process.env.REDIS_URL
     ),
     storage: !!process.env.S3_BUCKET,
-    billing: false,
+    billing: billingConfigured(),
     trends: false,
     ecommerce: false,
     voiceCloning: false,

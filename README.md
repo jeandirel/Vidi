@@ -25,12 +25,24 @@ npm run dev
 
 Le serveur web charge le `.env` de la racine du monorepo via la configuration Next.js. Les workers le chargent explicitement.
 
-Créer un compte depuis « Mon espace ». Les mots de passe sont dérivés avec scrypt ; les sessions utilisent des cookies HttpOnly et des jetons hachés en base. Les comptes commencent avec **0 crédit** : aucun paiement ou crédit gratuit n’est simulé. En développement uniquement, un opérateur peut allouer un solde via Prisma Studio (`npx prisma studio --schema packages/db/prisma/schema.prisma`). Le crédit d’un compte de production devra passer par un registre de transactions et les webhooks du prestataire de paiement.
+Créer un compte depuis « Mon espace ». Les mots de passe sont dérivés avec scrypt ; les sessions utilisent des cookies HttpOnly et des jetons hachés en base. Les comptes commencent avec **0 crédit** : aucun paiement ou crédit gratuit n’est simulé. En développement uniquement, un opérateur peut allouer un solde via Prisma Studio (`npx prisma studio --schema packages/db/prisma/schema.prisma`). Le crédit d’un compte de production passe par le registre de transactions et les factures Stripe vérifiées par webhook.
 
-- Scripts IA : configurer `OPENAI_API_KEY` et `OPENAI_MODEL` côté serveur. Aucun secret dans le navigateur.
+- Scripts IA : `LLM_PROVIDER=vercel`, `AI_GATEWAY_MODEL=nvidia/nemotron-3.5-lightning-free`, `LLM_FREE_ONLY=true`. Sur Vercel, activer OIDC ; hors Vercel, fournir `AI_GATEWAY_API_KEY` côté serveur. Le catalogue est vérifié avant chaque appel : prix entrée/sortie strictement nuls, aucun repli payant. Le fournisseur peut imposer quotas ou vérification de compte. Le consentement au traitement du texte produit est demandé avant envoi ; ce modèle gratuit peut conserver les données. `LLM_GUEST_ENABLED=true` autorise un essai sans compte. Sans Redis, ses quotas sont seulement locaux à chaque instance ; utiliser Redis avant une ouverture publique à grande échelle.
 - Vidéos : connecter un gateway respectant [le contrat vidéo](docs/video-gateway.md), puis lancer `npm run worker` dans un autre terminal. **Aucun fournisseur avatar/TTS natif n’est intégré à ce stade.**
-- Uploads : endpoint S3/R2 présigné ; configurer le bucket privé, les identifiants IAM et la politique CORS. L’interface utilise actuellement une image locale (1 Mo max).
+- Uploads : bibliothèque privée dans Réglages, upload S3/R2 présigné, vérification de taille/type par HeadObject, téléchargements signés. Configurer bucket privé, IAM et CORS PUT/Content-Type depuis APP_URL. Limite interface 100 Mo/fichier, quota nominal 1 Go/espace. Les uploads abandonnés et les courses concurrentes de quota nécessitent une politique de nettoyage et un contrôle renforcé avant exploitation à grande échelle.
 - Webhook sortant : `WEBHOOK_URL` et `WEBHOOK_SECRET`, configurés uniquement par l’opérateur. Ce webhook est global à l’instance, destiné à son backend de confiance ; il ne s’agit pas encore d’un abonnement webhook par client.
+
+## Équipes, validations et API
+
+Dans Réglages, un propriétaire gère les membres et invitations (lien à transmettre soi-même, aucune invitation envoyée automatiquement). L’utilisateur doit se connecter avec l’adresse invitée. Un éditeur soumet une version à validation ; le client VIEWER ou le propriétaire l’approuve. Toute modification invalide cette approbation et bloque le rendu jusqu’à une nouvelle validation.
+
+Les clés API Agency sont hachées, expirent sous 90 jours maximum et peuvent être révoquées. Le secret n’est affiché qu’à la création. Utiliser `Authorization: Bearer vi_key_…` et `workspaceId` sur les endpoints projets, rendus et assets. Une clé VIEWER ne peut pas écrire ; la suppression du membre créateur supprime son accès. Les routes de gestion restent réservées aux sessions propriétaires. Limite : 60 requêtes/minute/clé, Redis requis.
+
+## Abonnements Stripe
+
+Configurer les trois prix mensuels EUR (99/299/999 €), `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, leurs identifiants dans `.env.example` et `APP_URL` HTTPS en production. Créer l’endpoint Stripe `/api/billing/webhook` pour checkout.session.completed, checkout.session.async_payment_succeeded, customer.subscription.updated/deleted, invoice.paid et invoice.payment_failed. Configurer le portail client Stripe. Aucun paiement n’est activé sans l’ensemble des paramètres.
+
+Les factures de création/renouvellement payées accordent 15/60/250 crédits une seule fois par facture. Les proratas n’accordent pas un lot complet. Le retour navigateur ne crédite jamais le compte. Les crédits s’accumulent actuellement ; toute politique d’expiration devra être ajoutée explicitement. Tester d’abord avec des clés et prix Stripe de test.
 
 ## Importer une fiche produit
 
@@ -60,15 +72,15 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-Les tests d’intégration s’activent avec `INTEGRATION_TESTS=1` et les services du workflow CI. Ils utilisent deux vrais comptes, vérifient l’isolation des projets et les crédits sous requêtes concurrentes. Ils n’appellent aucun service IA payant. Ne pas les lancer sur une base de production.
+Les tests d’intégration s’activent avec `INTEGRATION_TESTS=1` et les services du workflow CI. Ils créent de vrais comptes, vérifient l’isolation, les invitations, les rôles, les clés API, les validations de versions et les crédits sous requêtes concurrentes. Ils n’appellent aucun service IA payant. Ne pas les lancer sur une base de production.
 
 ## Déploiement
 
-**Vercel :** importer ce dépôt, choisir `apps/web` comme Root Directory, activer l’accès aux fichiers hors de ce répertoire. Install Command : `cd ../.. && npm ci && npm run db:generate`. Build Command : `cd ../.. && npm run build`. Définir les variables serveur séparément pour Preview et Production ; migrer PostgreSQL avant promotion. Aucune intégration Vercel ni ressource cloud n’est créée automatiquement par ce commit.
+**Vercel :** importer ce dépôt, choisir `apps/web` comme Root Directory, activer l’accès aux fichiers hors de ce répertoire. Install Command : `cd ../.. && npm ci`. Build Command : `npm run build` (depuis apps/web, génération Prisma incluse). Définir les variables serveur séparément pour Preview et Production ; migrer PostgreSQL avant promotion. Aucune intégration Vercel ni ressource cloud n’est créée automatiquement par ce commit.
 
 **Workers :** `docker build -f apps/worker/Dockerfile -t vidi-worker .`, puis injecter les variables par le gestionnaire de secrets de l’hébergeur. Les workers doivent être des services persistants, pas des fonctions HTTP éphémères. Le redimensionnement ECS/Cloud Run et les alertes doivent être configurés sur l’infrastructure cible ; ils ne sont pas provisionnés ici.
 
-Consulter [le périmètre livré et le reste à faire](docs/specification-status.md). La base est destinée au développement ; abonnements, génération native, e-commerce, MCP, administration et validation client doivent être terminés avant ouverture commerciale.
+Consulter [le périmètre livré et le reste à faire](docs/specification-status.md). Les services restent conditionnés aux ressources et secrets configurés ; génération vidéo native, e-commerce, MCP et affiliation restent à réaliser avant de présenter le cahier des charges comme complet.
 
 ## Visuels
 

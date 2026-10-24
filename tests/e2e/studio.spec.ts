@@ -141,3 +141,49 @@ test('product import requires review and only applies after confirmation (mocked
   await page.getByRole('tab', { name: '2 Script' }).click();
   await expect(page.getByRole('textbox', { name: 'L’accroche', exact: true })).toHaveValue('');
 });
+
+test('free guest script generation requires consent (mocked LLM response)', async ({ page }) => {
+  await page.route('**/api/capabilities', (route) =>
+    route.fulfill({
+      json: {
+        database: false,
+        scripts: true,
+        guestScripts: true,
+        video: false,
+        storage: false,
+        billing: false,
+        trends: false,
+        ecommerce: false,
+        voiceCloning: false,
+      },
+    }),
+  );
+  await page.route('**/api/scripts', async (route) => {
+    expect(route.request().postDataJSON().dataConsent).toBe(true);
+    await route.fulfill({
+      json: {
+        source: 'ai',
+        model: 'free-test',
+        script: {
+          hook: 'Un flacon, plusieurs vies.',
+          body: 'Découvrez ce flacon rechargeable.',
+          cta: 'Voir le produit.',
+        },
+      },
+    });
+  });
+  await page.goto('/');
+  await expect(page.locator('.app')).toHaveAttribute('data-ready', 'true');
+  await page.getByRole('textbox', { name: 'Nom du produit' }).fill('Lumé');
+  await page
+    .getByRole('textbox', { name: 'Description du produit' })
+    .fill('Un flacon rechargeable.');
+  await page.getByRole('tab', { name: '2 Script' }).click();
+  const button = page.getByRole('button', { name: 'Rédiger avec l’IA' });
+  await expect(button).toBeDisabled();
+  await page.getByRole('checkbox', { name: /J’accepte d’envoyer/ }).check();
+  await button.click();
+  await expect(page.getByRole('textbox', { name: 'L’accroche', exact: true })).toHaveValue(
+    'Un flacon, plusieurs vies.',
+  );
+});

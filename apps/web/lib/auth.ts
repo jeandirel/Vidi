@@ -3,6 +3,7 @@ import { promisify } from 'node:util';
 import { cookies } from 'next/headers';
 import { db, Role } from '@vidi/db';
 import { ApiError, needsDatabase } from './api';
+import { rateLimit } from './rate-limit';
 const scrypt = promisify(scryptCallback);
 export const hashToken = (value: string) => createHash('sha256').update(value).digest('hex');
 export async function hashPassword(password: string) {
@@ -41,10 +42,40 @@ export async function currentUser() {
     throw new ApiError(401, 'Votre session a expiré.');
   return session.user;
 }
-export async function requireWorkspace(id: string, write = false) {
+export async function requireWorkspace(id: string, write = false, request?: Request) {
+  const authorization = request?.headers.get('authorization');
+  if (authorization) {
+    needsDatabase();
+    const token = authorization.match(/^Bearer (vi_key_[a-f0-9]{64})$/)?.[1];
+    if (!token) throw new ApiError(401, 'Clé API invalide.');
+    const key = await db.apiKey.findUnique({
+      where: { tokenHash: hashToken(token) },
+      include: { workspace: true, user: { include: { memberships: true } } },
+    });
+    if (!key || key.revokedAt || key.expiresAt < new Date())
+      throw new ApiError(401, 'Clé API expirée ou révoquée.');
+    if (key.workspace.plan !== 'agency')
+      throw new ApiError(403, 'L’accès API nécessite une offre Agency active.');
+    if (key.workspaceId !== id) throw new ApiError(404, 'Espace introuvable.');
+    const creator = key.user.memberships.find((m) => m.workspaceId === id);
+    if (!creator) throw new ApiError(401, 'Le créateur de cette clé a quitté l’espace.');
+    if (write && (key.role === Role.VIEWER || creator.role === Role.VIEWER))
+      throw new ApiError(403, 'Clé en lecture seule.');
+    await rateLimit(`api-key:${key.id}`, 60, 60);
+    return key.workspace;
+  }
   const user = await currentUser();
   const membership = user.memberships.find((m) => m.workspaceId === id);
   if (!membership) throw new ApiError(404, 'Espace introuvable.');
   if (write && membership.role === Role.VIEWER) throw new ApiError(403, 'Accès en lecture seule.');
   return membership.workspace;
+}
+
+export async function requireOwner(id: string) {
+  const user = await currentUser();
+  const membership = user.memberships.find((m) => m.workspaceId === id);
+  if (!membership) throw new ApiError(404, 'Espace introuvable.');
+  if (membership.role !== Role.OWNER)
+    throw new ApiError(403, 'Cette action est réservée au propriétaire.');
+  return { user, workspace: membership.workspace };
 }

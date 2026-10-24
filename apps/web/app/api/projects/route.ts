@@ -7,10 +7,15 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const workspaceId = url.searchParams.get('workspaceId') || '';
-    await requireWorkspace(workspaceId);
+    await requireWorkspace(workspaceId, false, request);
     const cursor = url.searchParams.get('cursor');
+    const query = (url.searchParams.get('q') || '').trim().slice(0, 200);
     const projects = await db.project.findMany({
-      where: { workspaceId },
+      where: {
+        workspaceId,
+        archivedAt: null,
+        ...(query ? { title: { contains: query, mode: 'insensitive' as const } } : {}),
+      },
       orderBy: { id: 'desc' },
       take: 21,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
@@ -25,11 +30,11 @@ export async function GET(request: Request) {
 }
 export async function POST(request: Request) {
   try {
-    checkOrigin(request);
+    checkOrigin(request, true);
     const { workspaceId, data } = z
       .object({ workspaceId: z.string().min(1), data: projectSchema })
       .parse(await jsonBody(request));
-    await requireWorkspace(workspaceId, true);
+    await requireWorkspace(workspaceId, true, request);
     if ((await db.project.count({ where: { workspaceId } })) >= 1000)
       throw new ApiError(409, 'Limite de projets atteinte.');
     const project = await db.project.create({ data: { workspaceId, title: data.title, data } });

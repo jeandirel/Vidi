@@ -30,6 +30,7 @@ export default function CreationPanel({
   const [dragging, setDragging] = useState(false);
   const [dragClip, setDragClip] = useState<string | null>(null);
   const [speaking, setSpeaking] = useState(false);
+  const [aiConsent, setAiConsent] = useState(false);
   function productField<K extends keyof ProjectInput['product']>(
     key: K,
     value: ProjectInput['product'][K],
@@ -325,6 +326,15 @@ export default function CreationPanel({
               <p>Une accroche, un message, une prochaine étape.</p>
             </div>
           </div>
+          <label className="import-image-choice">
+            <input
+              type="checkbox"
+              checked={aiConsent}
+              onChange={(e) => setAiConsent(e.target.checked)}
+            />
+            J’accepte d’envoyer ces informations au modèle gratuit. Le fournisseur peut les
+            conserver pour améliorer ses modèles.
+          </label>
           <div className="script-toolbar">
             <span className="tag">
               <Icon name="clock" size={12} />
@@ -334,7 +344,11 @@ export default function CreationPanel({
               <button className="text-button" onClick={onCompose}>
                 Composer un brouillon
               </button>
-              <button className="button secondary compact" disabled={!!busy} onClick={onAI}>
+              <button
+                className="button secondary compact"
+                disabled={!!busy || !aiConsent}
+                onClick={onAI}
+              >
                 <Icon
                   name={busy === 'script' ? 'loader' : 'sparkles'}
                   size={15}
