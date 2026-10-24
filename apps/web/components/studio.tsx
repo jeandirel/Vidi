@@ -302,7 +302,7 @@ export default function Studio() {
       d.data.product.name.toLowerCase().includes(query.toLowerCase()),
   );
   return (
-    <div className={`app ${collapsed ? 'sidebar-collapsed' : ''}`}>
+    <div className={`app ${collapsed ? 'sidebar-collapsed' : ''}`} data-ready={!!draftId}>
       {mobileOpen ? (
         <button
           className="scrim"

@@ -1,11 +1,13 @@
 import { test, expect } from '@playwright/test';
-test('create, edit, save, reload and duplicate a local campaign', async ({ page }) => {
+test('create, edit, save, reload and duplicate a local campaign', async ({ page }, testInfo) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/');
+  await expect(page.locator('.app')).toHaveAttribute('data-ready', 'true');
   await expect(
     page.getByRole('heading', { name: 'Une idée. Votre prochaine vidéo.' }),
   ).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('studio-desktop.png'), fullPage: true });
   await page.getByRole('textbox', { name: 'Nom du produit' }).fill('Lumé');
   await page
     .getByRole('textbox', { name: 'Description du produit' })
@@ -24,6 +26,7 @@ test('create, edit, save, reload and duplicate a local campaign', async ({ page 
   await page.getByRole('button', { name: 'Plan produit', exact: true }).click();
   await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
   await page.reload();
+  await expect(page.locator('.app')).toHaveAttribute('data-ready', 'true');
   await page.getByRole('button', { name: 'Mes projets', exact: true }).first().click();
   await expect(page.getByText('Brouillon ·')).toBeVisible();
   await page.getByRole('button', { name: 'Lumé 15s' }).click();
@@ -40,13 +43,18 @@ test('create, edit, save, reload and duplicate a local campaign', async ({ page 
 });
 test('an incomplete campaign is not falsely marked saved', async ({ page }) => {
   await page.goto('/');
+  await expect(page.locator('.app')).toHaveAttribute('data-ready', 'true');
   await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Ajoutez un nom de produit');
   await expect(page.getByRole('button', { name: 'Enregistré', exact: true })).toHaveCount(0);
 });
-test('mobile navigation and project form have no horizontal overflow', async ({ page }) => {
+test('mobile navigation and project form have no horizontal overflow', async ({
+  page,
+}, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
+  await expect(page.locator('.app')).toHaveAttribute('data-ready', 'true');
+  await page.screenshot({ path: testInfo.outputPath('studio-mobile.png'), fullPage: true });
   await page.getByRole('button', { name: 'Ouvrir la navigation' }).click();
   await page.getByRole('button', { name: 'Avatars', exact: true }).click();
   await expect(

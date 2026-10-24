@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 loadEnvConfig(resolve(process.cwd(), '../..'));
 const config: NextConfig = {
   transpilePackages: ['@vidi/core', '@vidi/db'],
+  allowedDevOrigins: ['127.0.0.1'],
   async headers() {
     return [
       {
