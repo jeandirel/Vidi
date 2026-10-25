@@ -88,6 +88,11 @@ export async function POST(request: Request) {
         throw new ApiError(422, 'Cette voix standard n’est pas installée sur le serveur.');
     }
     if (snapshot.media?.narration === 'clone') {
+      if (!mediaConfigured())
+        throw new ApiError(
+          503,
+          'Le clonage vocal nécessite le moteur média privé. Aucun crédit utilisé.',
+        );
       if (!['pro', 'agency'].includes(workspace.plan))
         throw new ApiError(403, 'Une voix clonée nécessite Pro ou Agency.');
       const voice = await db.voiceProfile.findFirst({

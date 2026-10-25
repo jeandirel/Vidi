@@ -68,6 +68,42 @@ test('service metadata, voice consent and revocation are isolated in real Postgr
     const stored = await db.voiceProfile.findUniqueOrThrow({ where: { id: profile.id } });
     expect(stored.consentVersion).toBe('voice-rights-v1');
     expect(stored.consentUserId).toBeTruthy();
+    // A legacy gateway has no private voice-reference contract: never charge for it.
+    await db.workspace.update({ where: { id: workspaceId }, data: { plan: 'pro', credits: 5 } });
+    const project = await db.project.create({
+      data: {
+        workspaceId,
+        title: 'Voice boundary',
+        data: {
+          title: 'Voice boundary',
+          product: { name: 'Flacon', description: 'Un flacon rechargeable.' },
+          script: {
+            hook: 'Découvrez le flacon.',
+            body: 'Un flacon rechargeable.',
+            cta: 'Voir les détails.',
+          },
+          avatarId: 'lea',
+          voiceId: 'claire',
+          language: 'fr',
+          emotion: 'warm',
+          duration: 15,
+          resolution: '720p',
+          captions: true,
+          clips: [],
+          media: { kind: 'product', narration: 'clone', voiceProfileId: profile.id },
+        },
+      },
+    });
+    const blocked = await a.post('/api/renders', {
+      data: {
+        workspaceId,
+        projectId: project.id,
+        idempotencyKey: crypto.randomUUID(),
+      },
+    });
+    expect(blocked.status()).toBe(503);
+    expect((await db.workspace.findUniqueOrThrow({ where: { id: workspaceId } })).credits).toBe(5);
+    expect(await db.render.count({ where: { projectId: project.id } })).toBe(0);
     // Editing provider configuration is owner-only even when the member can edit projects.
     const userB = await db.user.findUniqueOrThrow({ where: { email: emails[1] } });
     await db.membership.create({ data: { workspaceId, userId: userB.id, role: 'EDITOR' } });
