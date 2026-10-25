@@ -1953,20 +1953,68 @@ h1 {
   border-radius: 9px;
   overflow: hidden;
 }
-.cloud-list button {
+.cloud-projects {
+  margin-top: 32px;
+}
+.cloud-projects > .button {
+  margin-top: 16px;
+}
+.cloud-project-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  border-bottom: 1px solid #413048;
+  background: #211726;
+}
+.cloud-project-row:last-child {
+  border-bottom: 0;
+}
+.cloud-project-open {
   display: flex;
   align-items: center;
   gap: 15px;
+  flex: 1;
+  min-width: 0;
   padding: 20px;
-  background: #211726;
-  border-bottom: 1px solid #413048;
+  background: transparent;
   font-size: 12px;
   text-align: left;
 }
-.cloud-list button span {
+.cloud-project-open strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cloud-project-open span {
   margin-left: auto;
   font-size: 10px;
   color: #9e86aa;
+  white-space: nowrap;
+}
+.cloud-project-row > .icon-button {
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+.cloud-archive-confirm {
+  flex-basis: 100%;
+  padding: 0 20px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.cloud-archive-confirm p {
+  flex-basis: 100%;
+  font-size: 12px;
+}
+@media (max-width: 600px) {
+  .cloud-project-open {
+    gap: 8px;
+    padding: 14px 10px;
+  }
+  .cloud-project-open span {
+    display: none;
+  }
 }
 .error-page {
   display: grid;

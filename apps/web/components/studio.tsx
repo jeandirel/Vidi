@@ -19,6 +19,7 @@ import { api } from '@/lib/client-api';
 import WorkspaceConsole from './workspace-console';
 import ProjectReview from './project-review';
 import AssetLibrary from './asset-library';
+import CloudProjects from './cloud-projects';
 
 type View = 'studio' | 'projects' | 'avatars' | 'renders' | 'settings' | 'plans';
 export type Workspace = { id: string; name: string; credits: number; plan: string; role: string };
@@ -270,35 +271,7 @@ export default function Studio() {
       setBusy('');
     }
   }
-  async function loadCloudProjects() {
-    if (!workspaceId) {
-      setAccountOpen(true);
-      return;
-    }
-    setBusy('projects');
-    try {
-      const result = await api<{
-        projects: { id: string; data: ProjectInput; updatedAt: string }[];
-        nextCursor: string | null;
-      }>(`/api/projects?workspaceId=${workspaceId}`);
-      const valid = result.projects.filter((p) => projectSchema.safeParse(p.data).success);
-      setCloudProjects(valid);
-      setNotice(
-        result.nextCursor
-          ? 'Les 20 projets cloud les plus récents sont affichés.'
-          : 'Projets cloud actualisés.',
-      );
-    } catch (error) {
-      setNotice((error as Error).message);
-    } finally {
-      setBusy('');
-    }
-  }
-  const [cloudProjects, setCloudProjects] = useState<
-    { id: string; data: ProjectInput; updatedAt: string }[]
-  >([]);
   useEffect(() => {
-    setCloudProjects([]);
     setCloudId(null);
     setRenders([]);
   }, [workspaceId]);
@@ -638,14 +611,6 @@ export default function Studio() {
                     onChange={(e) => setQuery(e.target.value)}
                   />
                 </label>
-                <button
-                  className="button secondary compact"
-                  disabled={!!busy}
-                  onClick={() => void loadCloudProjects()}
-                >
-                  <Icon name="cloud" size={15} />
-                  Actualiser le cloud
-                </button>
               </div>
               <h2 className="section-title">
                 Sur cet appareil <span>{filtered.length}</span>
@@ -709,32 +674,29 @@ export default function Studio() {
                   label="Ouvrir le studio"
                 />
               )}
-              {cloudProjects.length ? (
-                <>
-                  <h2 className="section-title">Dans votre espace cloud</h2>
-                  <div className="cloud-list">
-                    {cloudProjects.map((p) => (
-                      <button
-                        key={p.id}
-                        onClick={() => {
-                          setProject(p.data);
-                          setCloudId(p.id);
-                          setCloudDirty(false);
-                          setDraftId(crypto.randomUUID());
-                          setSaved(false);
-                          setStep(0);
-                          navigate('studio');
-                        }}
-                      >
-                        <Icon name="cloud" />
-                        <strong>{p.data.title}</strong>
-                        <span>{new Date(p.updatedAt).toLocaleDateString('fr-FR')}</span>
-                        <Icon name="right" />
-                      </button>
-                    ))}
-                  </div>
-                </>
-              ) : null}
+              {workspaceId ? (
+                <CloudProjects
+                  key={workspaceId}
+                  workspaceId={workspaceId}
+                  canWrite={!!workspace && workspace.role !== 'VIEWER'}
+                  notify={setNotice}
+                  onOpen={(p) => {
+                    setProject(p.data);
+                    setCloudId(p.id);
+                    setCloudRevision(p.revision);
+                    setCloudDirty(false);
+                    setDraftId(crypto.randomUUID());
+                    setSaved(false);
+                    setStep(0);
+                    navigate('studio');
+                  }}
+                />
+              ) : (
+                <button className="button secondary" onClick={() => setAccountOpen(true)}>
+                  <Icon name="cloud" />
+                  Ouvrir mes projets cloud
+                </button>
+              )}
             </>
           ) : null}
           {view === 'avatars' ? (
