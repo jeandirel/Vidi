@@ -180,3 +180,10 @@ model BillingEvent {
   type String
   createdAt DateTime @default(now())
 }
+
+model RateLimitBucket {
+  key String @id
+  count Int
+  expiresAt DateTime
+  @@index([expiresAt])
+}
