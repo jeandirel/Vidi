@@ -1,6 +1,6 @@
 # Raccorder Vidi à Neon
 
-Le compte Neon connecté appartient à une organisation gérée par Vercel. La création d’un projet depuis l’API Neon est refusée pour cette organisation ; créer la ressource dans Vercel, projet **Vidi → Storage → Create Database → Neon**, avec l’offre **Free**. Ne pas changer le plan de l’organisation. La ressource `bold-smoke-96008102` a été créée par le propriétaire dans Vercel. La branche principale est `br-hidden-tree-b77z44h9` ; la branche de validation est `br-royal-art-b7jr3bd5` (`vidi-preview`). Les connexions Vercel Preview et Production sont séparées.
+Le compte Neon connecté appartient à une organisation gérée par Vercel. La création d’un projet depuis l’API Neon est refusée pour cette organisation ; créer la ressource dans Vercel, projet **Vidi → Storage → Create Database → Neon**, avec l’offre **Free**. Ne pas changer le plan de l’organisation. La ressource `bold-smoke-96008102` a été créée par le propriétaire dans Vercel. La branche principale est `br-hidden-tree-b77z44h9`. L’intégration Vercel crée automatiquement les branches de préversion : `preview/codex/neon-connect` correspond à `br-dry-pine-b7y9c5ch`. Les connexions Vercel Preview et Production sont séparées. Une branche manuelle de développement `vidi-preview` existe aussi ; elle n’est pas la branche utilisée par la préversion Vercel vérifiée.
 
 ## Configuration
 
@@ -26,3 +26,7 @@ L’organisation connectée indique une offre Free. Les limites applicables doiv
 `VIDI_DB_SETUP=true` active l’exécution de `prisma migrate deploy` avant le build, avec `DATABASE_URL_UNPOOLED` (connexion directe). Les sorties ne révèlent pas la chaîne de connexion. Sans ce drapeau, aucun schéma n’est modifié pendant le build.
 
 `VIDI_CLOUD_SMOKE=true` lance un contrôle opt-in du serveur Next compilé sur localhost dans le build : inscription d’un compte jetable, session, sauvegarde/réouverture/recherche d’un projet, déconnexion et reconnexion. Seuls le résultat des contrôles et les erreurs sans secrets sont affichés. Le compte de test et son espace sont supprimés après vérification ; aucun rendu vidéo ni appel LLM n’est déclenché. Désactiver ce contrôle après validation.
+
+## Vérification effectuée
+
+Les trois migrations Prisma ont été appliquées sur la branche de préversion Vercel et sur `main`. Le contrôle HTTP réel a réussi dans les deux environnements : inscription, session, sauvegarde et réouverture d’un projet, recherche, déconnexion et reconnexion. Les registres Prisma et le nettoyage des comptes/projets jetables ont été vérifiés par requêtes en lecture seule. Le contrôle jetable a ensuite été désactivé pour les prochains builds. Les migrations de production restent activées via `VIDI_DB_SETUP=true`.
