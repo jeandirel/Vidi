@@ -625,9 +625,12 @@ export default function Studio() {
                     clips: project.clips.map((clip) => ({
                       ...clip,
                       start: Math.min(clip.start, variant.duration - 0.1),
-                      duration: Math.min(
-                        clip.duration,
-                        variant.duration - Math.min(clip.start, variant.duration - 0.1),
+                      duration: Math.max(
+                        0.1,
+                        Math.min(
+                          clip.duration,
+                          variant.duration - Math.min(clip.start, variant.duration - 0.1),
+                        ),
                       ),
                     })),
                   });

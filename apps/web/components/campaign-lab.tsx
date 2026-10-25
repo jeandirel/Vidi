@@ -677,9 +677,9 @@ export default function CampaignLab({
               </div>
               <p className="lab-note">
                 Colonnes : variant_id, impressions, clicks, spend, conversions, revenue.
-                Identifiants du modèle, une ligne par variante. Point décimal, pas de séparateur de
-                milliers. L’import remplace les résultats précédents après confirmation ; aucune
-                connexion Meta/TikTok automatique.
+                Identifiants du modèle, une ligne par variante. Point décimal, montants à deux
+                décimales maximum, pas de séparateur de milliers. L’import remplace les résultats
+                précédents après confirmation ; aucune connexion Meta/TikTok automatique.
               </p>
               {reading ? <p role="status">Lecture du fichier…</p> : null}
               {pending ? (

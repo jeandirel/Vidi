@@ -41,14 +41,15 @@ export const variantSchema = z.object({
   createdAt: z.string().datetime(),
 });
 const count = z.number().int().min(0).max(1e12);
+const money = z.number().finite().min(0).max(1e12).multipleOf(0.01);
 export const metricsSchema = z
   .object({
     variantId: z.string().min(1).max(100),
     impressions: count,
     clicks: count,
-    spend: z.number().finite().min(0).max(1e12),
+    spend: money,
     conversions: count,
-    revenue: z.number().finite().min(0).max(1e12),
+    revenue: money,
   })
   .refine((r) => r.clicks <= r.impressions, 'Les clics ne peuvent pas dépasser les impressions.');
 export const campaignSchema = z
