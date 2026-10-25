@@ -1956,6 +1956,21 @@ h1 {
 .cloud-projects {
   margin-top: 32px;
 }
+.cloud-projects .section-toolbar {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+.cloud-projects .search-box {
+  flex: 1 1 240px;
+  min-width: 0;
+  max-width: 100%;
+}
+.cloud-projects .search-box input {
+  min-width: 0;
+}
+.cloud-list:empty {
+  display: none;
+}
 .cloud-projects > .button {
   margin-top: 16px;
 }
@@ -2878,4 +2893,34 @@ h1 {
   margin: 0;
   border: 0;
   min-width: 0;
+}
+@media (max-width: 600px) {
+  .topbar {
+    gap: 8px;
+  }
+  .breadcrumb {
+    min-width: 0;
+  }
+  .breadcrumb strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .topbar-actions {
+    flex-shrink: 0;
+  }
+  .local-status {
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+  }
+  .page-heading {
+    flex-wrap: wrap;
+  }
+  .page-heading > div {
+    min-width: 0;
+    max-width: 100%;
+  }
 }

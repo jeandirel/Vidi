@@ -59,6 +59,10 @@ for (const role of ['OWNER', 'VIEWER']) {
     await cloud.getByRole('button', { name: 'Rechercher', exact: true }).click();
     await expect(cloud.getByRole('button', { name: 'Ouvrir Lumé seconde' })).toHaveCount(0);
     if (role === 'VIEWER') {
+      await page.setViewportSize({ width: 390, height: 844 });
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      ).toBe(true);
       await expect(cloud.getByRole('button', { name: /Archiver/ })).toHaveCount(0);
       await cloud.getByRole('button', { name: 'Ouvrir Lumé première' }).click();
       await expect(page.getByRole('textbox', { name: 'Titre du projet' })).toHaveValue(
