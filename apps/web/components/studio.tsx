@@ -20,8 +20,10 @@ import WorkspaceConsole from './workspace-console';
 import ProjectReview from './project-review';
 import AssetLibrary from './asset-library';
 import CloudProjects from './cloud-projects';
+import dynamic from 'next/dynamic';
+const CampaignLab = dynamic(() => import('./campaign-lab'));
 
-type View = 'studio' | 'projects' | 'avatars' | 'renders' | 'settings' | 'plans';
+type View = 'lab' | 'studio' | 'projects' | 'avatars' | 'renders' | 'settings' | 'plans';
 export type Workspace = { id: string; name: string; credits: number; plan: string; role: string };
 export type Session = {
   user: { id: string; name: string; email: string };
@@ -55,6 +57,7 @@ const steps = [
   { label: 'Montage', icon: 'layers' },
 ] as const;
 const titles: Record<View, string> = {
+  lab: 'Laboratoire de campagnes',
   studio: 'Studio de création',
   projects: 'Mes projets',
   avatars: 'Bibliothèque d’avatars',
@@ -207,6 +210,9 @@ export default function Studio() {
         product,
         language: project.language,
         duration: project.duration,
+        creativeContext: project.campaign
+          ? { brief: project.campaign.brief, evidence: project.campaign.evidence }
+          : undefined,
       });
       update({ ...project, script: result.script });
     } catch (error) {
@@ -312,6 +318,7 @@ export default function Studio() {
           {(
             [
               { id: 'studio', label: 'Studio', icon: 'wand' },
+              { id: 'lab', label: 'Laboratoire', icon: 'sliders' },
               { id: 'projects', label: 'Mes projets', icon: 'folder' },
               { id: 'avatars', label: 'Avatars', icon: 'users' },
               { id: 'renders', label: 'Rendus', icon: 'film' },
@@ -319,6 +326,7 @@ export default function Studio() {
           ).map((item) => (
             <button
               title={item.label}
+              aria-label={item.label}
               key={item.id}
               className={`nav-item ${view === item.id ? 'active' : ''}`}
               onClick={() => navigate(item.id)}
@@ -582,11 +590,58 @@ export default function Studio() {
                   Un produit, plusieurs angles. Dupliquez un projet pour explorer une nouvelle
                   accroche.
                 </span>
-                <button onClick={() => navigate('projects')}>
-                  Mes projets <Icon name="next" size={14} />
+                <button onClick={() => navigate('lab')}>
+                  Préparer un test <Icon name="next" size={14} />
                 </button>
               </div>
             </>
+          ) : null}
+          {view === 'lab' ? (
+            <CampaignLab
+              key={`${draftId}:${workspaceId}`}
+              project={project}
+              update={update}
+              notify={setNotice}
+              busy={!!busy}
+              onSave={localSave}
+              onCloudSave={() => void syncCloud()}
+              onEdit={(variant) => {
+                if (variant) {
+                  if (variant.productName !== project.product.name) {
+                    setNotice(
+                      'Cette variante concerne un autre produit. Ouvrez le projet d’origine.',
+                    );
+                    return;
+                  }
+                  update({
+                    ...project,
+                    script: variant.script,
+                    avatarId: variant.avatarId,
+                    voiceId: variant.voiceId,
+                    language: variant.language,
+                    emotion: variant.emotion,
+                    duration: variant.duration,
+                    resolution: variant.resolution,
+                    clips: project.clips.map((clip) => ({
+                      ...clip,
+                      start: Math.min(clip.start, variant.duration - 0.1),
+                      duration: Math.max(
+                        0.1,
+                        Math.min(
+                          clip.duration,
+                          variant.duration - Math.min(clip.start, variant.duration - 0.1),
+                        ),
+                      ),
+                    })),
+                  });
+                  setStep(1);
+                  setNotice(
+                    'Variante appliquée au script. Les résultats du test restent associés à son snapshot initial.',
+                  );
+                }
+                navigate('studio');
+              }}
+            />
           ) : null}
           {view === 'projects' ? (
             <>

@@ -40,3 +40,7 @@ La cible reste l’ensemble du cahier des charges fourni. Cette première livrai
 - Les URL de vidéos finales exigent HTTPS et un nom d’hôte explicitement autorisé.
 - L’import de fiche publique exige un compte et applique des quotas par espace. HTTPS/443 uniquement, aucune adresse IP littérale, DNS public épinglé à la connexion TLS, contrôle à chaque redirection, délai total 12 s et taille maximale 1 Mo. Les scripts de la page ne sont pas exécutés ; les boutiques nécessitant JavaScript, authentification ou bloquant cet import peuvent nécessiter une saisie manuelle.
 - Aucun témoignage fictif n’est ajouté par la composition locale ou demandé au générateur IA.
+
+## Livraison laboratoire de campagnes — 25 octobre 2026
+
+Brief par projet, preuves déclarées, tests de scripts à variable unique, import CSV validé avec confirmation et provenance, calcul CTR/CPA/ROAS et export JSON sont livrés. Le brief alimente le LLM ; preuves et résultats persistent dans les projets locaux/cloud. Aucun moteur vidéo supplémentaire ni compte publicitaire n’est activé. [Détail et limites](campaign-lab.md) · [Analyse concurrentielle](ugc-market-benchmark.md).

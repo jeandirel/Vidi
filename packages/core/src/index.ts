@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { campaignSchema, scriptSchema } from './campaign';
+export * from './campaign';
 
 export const productSchema = z.object({
   name: z.string().trim().min(2).max(120),
@@ -30,11 +32,6 @@ export const productSchema = z.object({
     )
     .default(''),
 });
-export const scriptSchema = z.object({
-  hook: z.string().trim().min(1).max(400),
-  body: z.string().trim().min(1).max(2400),
-  cta: z.string().trim().min(1).max(300),
-});
 export const clipSchema = z.object({
   id: z.string().max(100),
   label: z.string().max(80),
@@ -55,6 +52,7 @@ export const projectSchema = z
     resolution: z.enum(['720p', '1080p', '4k']),
     captions: z.boolean(),
     clips: z.array(clipSchema).max(30),
+    campaign: campaignSchema.optional(),
   })
   .superRefine((p, ctx) => {
     for (const c of p.clips)

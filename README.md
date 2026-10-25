@@ -87,3 +87,7 @@ Consulter [le périmètre livré et le reste à faire](docs/specification-status
 ## Visuels
 
 Portraits photographiques de prévisualisation provenant d’Unsplash, référencés dans [les crédits visuels](docs/assets.md). Les noms des profils sont des étiquettes de casting fictives. Ces portraits ne sont pas des personnes clonées ni des avatars animables fournis par une API.
+
+## Laboratoire de campagnes
+
+Le menu **Laboratoire** rassemble brief de marque, arguments sourcés, variantes isolant une accroche ou un CTA, import CSV de résultats avec confirmation, métriques calculées et dossier JSON exportable. Il ne lance aucun rendu vidéo ni publicité. [Guide](docs/campaign-lab.md) · [Analyse de huit acteurs et priorités](docs/ugc-market-benchmark.md).
