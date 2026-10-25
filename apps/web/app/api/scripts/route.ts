@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { productSchema } from '@vidi/core';
+import { brandBriefSchema, evidenceSchema, productSchema } from '@vidi/core';
 import { requireWorkspace } from '@/lib/auth';
 import { ApiError, checkOrigin, errorResponse, jsonBody } from '@/lib/api';
 import { rateLimit } from '@/lib/rate-limit';
@@ -12,6 +12,9 @@ const schema = z.object({
   language: z.enum(['fr', 'en', 'es', 'de', 'pt']),
   duration: z.union([z.literal(15), z.literal(30), z.literal(60)]),
   dataConsent: z.literal(true),
+  creativeContext: z
+    .object({ brief: brandBriefSchema, evidence: z.array(evidenceSchema).max(8) })
+    .optional(),
 });
 export async function POST(request: Request) {
   try {

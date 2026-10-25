@@ -88,7 +88,11 @@ const worker = new Worker<{ renderId: string }>(
         },
         redirect: 'error',
         signal: AbortSignal.timeout(300000),
-        body: JSON.stringify({ id: render.id, workspaceId: render.workspaceId, project: input }),
+        body: JSON.stringify({
+          id: render.id,
+          workspaceId: render.workspaceId,
+          project: { ...input, campaign: undefined },
+        }),
       });
       if (!response.ok) throw new Error('Video provider failed');
       const result = (await response.json()) as { videoUrl?: string };

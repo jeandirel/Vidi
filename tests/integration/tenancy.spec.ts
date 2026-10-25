@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { PrismaClient } from '@prisma/client';
-import { composeDraft } from '../../packages/core/src';
+import { campaignSchema, composeDraft } from '../../packages/core/src';
 const db = new PrismaClient();
 test.afterAll(() => db.$disconnect());
 test('real PostgreSQL/Redis: cookie auth, tenant isolation, credit atomicity and idempotency', async ({
@@ -46,10 +46,16 @@ test('real PostgreSQL/Redis: cookie auth, tenant isolation, credit atomicity and
       resolution: '720p',
       captions: true,
       clips: [],
+      campaign: campaignSchema.parse({
+        brief: { name: 'Cloud proof' },
+        evidence: [{ id: 'source', claim: 'rechargeable', source: 'https://shop.example.com/p' }],
+      }),
     };
     const created = await a.post('/api/projects', { data: { workspaceId, data } });
     expect(created.status()).toBe(201);
     const project = await created.json();
+    const reopened = await (await a.get(`/api/projects/${project.id}`)).json();
+    expect(reopened.data.campaign).toEqual(data.campaign);
     expect((await b.get(`/api/projects/${project.id}`)).status()).toBe(404);
     expect(
       (
