@@ -12,6 +12,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         status: true,
         credits: true,
         outputUrl: true,
+        outputAssetId: true,
         error: true,
         createdAt: true,
       },

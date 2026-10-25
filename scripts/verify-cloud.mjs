@@ -55,6 +55,10 @@ try {
   const session = await call('/api/auth/session');
   workspaceId = session.workspaces[0].id;
   if (session.user.id !== userId) throw new Error('CLOUD_CHECK_SESSION');
+  const connections = await call(`/api/connections?workspaceId=${workspaceId}`);
+  const voices = await call(`/api/voices?workspaceId=${workspaceId}`);
+  if (connections.connections.length || voices.profiles.length)
+    throw new Error('CLOUD_CHECK_SERVICE_ISOLATION');
   const data = {
     title: 'Vidi smoke bottle',
     product: {

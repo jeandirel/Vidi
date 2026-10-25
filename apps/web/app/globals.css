@@ -3315,3 +3315,87 @@ h1 {
     font-size: 24px;
   }
 }
+
+.service-console {
+  margin: 24px 0;
+  min-width: 0;
+}
+.service-console > p {
+  margin: 12px 0;
+  line-height: 1.8;
+}
+.service-console h3 {
+  font-weight: 550;
+  font-size: 16px;
+}
+.service-catalog {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+.service-product {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+  text-align: left;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 20px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.service-product > span,
+.service-product > small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.service-product > strong {
+  font-weight: 500;
+  line-height: 1.6;
+}
+.service-review {
+  margin: 16px 0;
+  border-left: 2px solid var(--purple);
+  padding: 12px;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.service-review > span {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.settings-grid > .panel,
+.service-console .field {
+  min-width: 0;
+}
+.settings-grid > .panel {
+  overflow-wrap: anywhere;
+}
+.service-console .service-row {
+  flex-wrap: wrap;
+}
+.service-console input,
+.service-console select,
+.service-console textarea {
+  width: 100%;
+  min-width: 0;
+}
+.service-console input[type='checkbox'] {
+  width: auto;
+  flex-shrink: 0;
+}
+@media (max-width: 640px) {
+  .settings-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .service-console .lab-actions {
+    align-items: stretch;
+  }
+  .service-console .lab-actions > .field {
+    width: 100%;
+  }
+}

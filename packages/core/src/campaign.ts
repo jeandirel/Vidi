@@ -55,6 +55,18 @@ export const metricsSchema = z
 export const campaignSchema = z
   .object({
     brief: brandBriefSchema.default({}),
+    inspiration: z
+      .array(
+        z.object({
+          title: z.string().max(1000),
+          url: z.string().url().max(2000),
+          provider: z.literal('youtube'),
+          observedAt: z.string().datetime(),
+          note: z.string().max(600).default(''),
+        }),
+      )
+      .max(8)
+      .optional(),
     evidence: z.array(evidenceSchema).max(8).default([]),
     variants: z.array(variantSchema).max(24).default([]),
     results: z.array(metricsSchema).max(24).default([]),

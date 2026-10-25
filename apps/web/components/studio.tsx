@@ -22,6 +22,8 @@ import AssetLibrary from './asset-library';
 import CloudProjects from './cloud-projects';
 import dynamic from 'next/dynamic';
 const CampaignLab = dynamic(() => import('./campaign-lab'));
+const ServiceConnections = dynamic(() => import('./service-connections'));
+const VoiceStudio = dynamic(() => import('./voice-studio'));
 
 type View = 'lab' | 'studio' | 'projects' | 'avatars' | 'renders' | 'settings' | 'plans';
 export type Workspace = { id: string; name: string; credits: number; plan: string; role: string };
@@ -46,6 +48,7 @@ type Render = {
   status: string;
   credits: number;
   outputUrl: string | null;
+  outputAssetId?: string | null;
   error: string | null;
   createdAt: string;
 };
@@ -111,10 +114,23 @@ export default function Studio() {
     setDrafts(loadDrafts());
     setDraftId(crypto.randomUUID());
     void refreshSession();
-    void api<Capabilities>('/api/capabilities')
+  }, []);
+  useEffect(() => {
+    let live = true;
+    void api<Capabilities>(`/api/capabilities${workspaceId ? `?workspaceId=${workspaceId}` : ''}`)
+      .then((data) => {
+        if (live) setCapabilities(data);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [workspaceId]);
+  function refreshCapabilities() {
+    void api<Capabilities>(`/api/capabilities?workspaceId=${workspaceId}`)
       .then(setCapabilities)
       .catch(() => {});
-  }, []);
+  }
   useEffect(() => {
     if (!notice) return;
     const timer = setTimeout(() => setNotice(''), 7000);
@@ -211,7 +227,14 @@ export default function Studio() {
         language: project.language,
         duration: project.duration,
         creativeContext: project.campaign
-          ? { brief: project.campaign.brief, evidence: project.campaign.evidence }
+          ? {
+              brief: project.campaign.brief,
+              evidence: project.campaign.evidence,
+              inspiration: project.campaign.inspiration?.map(({ title, note }) => ({
+                title,
+                note,
+              })),
+            }
           : undefined,
       });
       update({ ...project, script: result.script });
@@ -834,10 +857,10 @@ export default function Studio() {
                         </small>
                         {r.error ? <p>{r.error}</p> : null}
                       </div>
-                      {r.outputUrl ? (
+                      {r.outputUrl || r.outputAssetId ? (
                         <a
                           className="button secondary compact"
-                          href={r.outputUrl}
+                          href={r.outputAssetId ? `/api/renders/${r.id}/download` : r.outputUrl!}
                           target="_blank"
                           rel="noopener noreferrer"
                         >
@@ -890,6 +913,43 @@ export default function Studio() {
                   canWrite={workspace.role !== 'VIEWER'}
                   notify={setNotice}
                 />
+              ) : null}
+              {workspace ? (
+                <>
+                  <ServiceConnections
+                    key={`services:${workspace.id}`}
+                    workspaceId={workspace.id}
+                    role={workspace.role}
+                    project={project}
+                    update={update}
+                    notify={setNotice}
+                    onChange={refreshCapabilities}
+                    onProduct={(product) => {
+                      update({
+                        ...project,
+                        product,
+                        title: product.name,
+                        script: { hook: '', body: '', cta: '' },
+                        campaign: undefined,
+                      });
+                      setCloudId(null);
+                      setDraftId(crypto.randomUUID());
+                      setStep(0);
+                      navigate('studio');
+                      setNotice(
+                        'Produit importé. Vérifiez les détails avant de rédiger votre script.',
+                      );
+                    }}
+                  />
+                  <VoiceStudio
+                    key={`voices:${workspace.id}`}
+                    workspaceId={workspace.id}
+                    canWrite={workspace.role !== 'VIEWER'}
+                    plan={workspace.plan}
+                    connected={!!capabilities?.voiceCloning}
+                    notify={setNotice}
+                  />
+                </>
               ) : null}
               <div className="settings-grid">
                 <section className="panel">

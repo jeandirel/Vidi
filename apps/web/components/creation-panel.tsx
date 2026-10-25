@@ -4,6 +4,7 @@ import { scriptSeconds, scriptWords, type Clip, type ProjectInput } from '@vidi/
 import { avatars, voices } from '@/lib/catalog';
 import Icon from './icon';
 import ProductImport from './product-import';
+import VoiceChoice from './voice-choice';
 type Props = {
   step: number;
   project: ProjectInput;
@@ -696,6 +697,59 @@ export default function CreationPanel({
               </div>
             ))}
           </div>
+          <div className="inline-options">
+            <label className="field">
+              Type de vidéo
+              <select
+                value={p.media?.kind || 'product'}
+                onChange={(e) =>
+                  update({
+                    ...p,
+                    media: {
+                      kind: e.target.value as 'product' | 'avatar',
+                      narration:
+                        e.target.value === 'avatar' ? 'standard' : p.media?.narration || 'none',
+                      voiceProfileId: p.media?.voiceProfileId,
+                    },
+                  })
+                }
+              >
+                <option value="product">Vidéo produit · photo et texte</option>
+                <option value="avatar">Avatar parlant · bibliothèque autorisée du serveur</option>
+              </select>
+            </label>
+            <label className="field">
+              Narration du rendu
+              <select
+                value={p.media?.narration || 'none'}
+                onChange={(e) =>
+                  update({
+                    ...p,
+                    media: {
+                      kind: p.media?.kind || 'product',
+                      narration: e.target.value as 'none' | 'standard' | 'clone',
+                      voiceProfileId: p.media?.voiceProfileId,
+                    },
+                  })
+                }
+              >
+                <option value="none" disabled={p.media?.kind === 'avatar'}>
+                  Sans narration
+                </option>
+                <option value="standard">Voix standard du serveur</option>
+                <option value="clone">Voix personnalisée autorisée</option>
+              </select>
+            </label>
+          </div>
+          {p.media?.narration === 'clone' ? (
+            <VoiceChoice
+              workspaceId={workspaceId}
+              value={p.media.voiceProfileId || ''}
+              onChange={(voiceProfileId) =>
+                update({ ...p, media: { ...p.media!, voiceProfileId } })
+              }
+            />
+          ) : null}
           <div className="export-settings">
             <label className="field">
               Résolution

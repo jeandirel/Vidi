@@ -1,0 +1,6 @@
+# Add after compose.media.yaml when the host has NVIDIA Container Toolkit.
+services:
+  media:
+    gpus: all
+    environment:
+      MEDIA_DEVICE: cuda

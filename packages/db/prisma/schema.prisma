@@ -48,6 +48,9 @@ model Workspace {
   invitations Invitation[]
   assets Asset[]
   subscription Subscription?
+  connections ServiceConnection[]
+  voiceProfiles VoiceProfile[]
+  voiceGenerations VoiceGeneration[]
   createdAt DateTime @default(now())
 }
 model Membership {
@@ -85,6 +88,7 @@ model Render {
   credits Int
   status RenderStatus @default(QUEUED)
   outputUrl String?
+  outputAssetId String?
   error String?
   ledger CreditEntry[]
   createdAt DateTime @default(now())
@@ -159,6 +163,7 @@ model Asset {
   mime String
   size Int
   confirmedAt DateTime?
+  voiceProfiles VoiceProfile[]
   createdAt DateTime @default(now())
   @@index([workspaceId,createdAt])
 }
@@ -186,4 +191,48 @@ model RateLimitBucket {
   count Int
   expiresAt DateTime
   @@index([expiresAt])
+}
+
+model ServiceConnection {
+  id String @id @default(cuid())
+  workspaceId String
+  workspace Workspace @relation(fields:[workspaceId],references:[id],onDelete:Cascade)
+  provider String
+  config Json
+  sealedSecret String?
+  checkedAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([workspaceId,provider])
+}
+model VoiceProfile {
+  id String @id @default(cuid())
+  workspaceId String
+  workspace Workspace @relation(fields:[workspaceId],references:[id],onDelete:Cascade)
+  name String
+  sourceAssetId String?
+  sourceAsset Asset? @relation(fields:[sourceAssetId],references:[id],onDelete:SetNull)
+  consentUserId String
+  consentVersion String
+  consentAt DateTime @default(now())
+  revokedAt DateTime?
+  generations VoiceGeneration[]
+  @@index([workspaceId,consentAt])
+}
+model VoiceGeneration {
+  id String @id @default(cuid())
+  workspaceId String
+  workspace Workspace @relation(fields:[workspaceId],references:[id],onDelete:Cascade)
+  profileId String
+  profile VoiceProfile @relation(fields:[profileId],references:[id],onDelete:Cascade)
+  idempotencyKey String
+  text String
+  language String
+  emotion String
+  status RenderStatus @default(QUEUED)
+  outputAssetId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([workspaceId,idempotencyKey])
+  @@index([workspaceId,status])
 }

@@ -10,7 +10,7 @@ import { rateLimit } from '@/lib/rate-limit';
 const schema = z.object({
   workspaceId: z.string(),
   name: z.string().trim().min(1).max(200).default('Média'),
-  type: z.enum(['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'audio/mpeg']),
+  type: z.enum(['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'audio/mpeg', 'audio/wav']),
   size: z
     .number()
     .int()
