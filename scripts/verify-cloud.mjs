@@ -16,10 +16,10 @@ server.on('error', () => {});
 let cookie = '';
 const email = `vidi-smoke-${randomUUID()}@example.test`;
 const password = randomUUID() + randomUUID();
-let userId, workspaceId;
-async function call(path, data, status = 200) {
+let userId, workspaceId, pendingAssetId;
+async function call(path, data, status = 200, method) {
   const response = await fetch(origin + path, {
-    method: data === undefined ? 'GET' : 'POST',
+    method: method || (data === undefined ? 'GET' : 'POST'),
     headers: { Origin: origin, Cookie: cookie, 'Content-Type': 'application/json' },
     ...(data !== undefined ? { body: JSON.stringify(data) } : {}),
     signal: AbortSignal.timeout(20000),
@@ -84,6 +84,69 @@ try {
   if (reopened.data.title !== data.title) throw new Error('CLOUD_CHECK_PROJECT_REOPEN');
   const found = await call(`/api/projects?workspaceId=${workspaceId}&q=smoke`);
   if (!found.projects.some((p) => p.id === project.id)) throw new Error('CLOUD_CHECK_SEARCH');
+  if (process.env.VIDI_STORAGE_SMOKE === 'true') {
+    const bytes = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jFqkAAAAASUVORK5CYII=',
+      'base64',
+    );
+    const upload = await call('/api/assets/presign', {
+      workspaceId,
+      name: 'Vidi verification.png',
+      type: 'image/png',
+      size: bytes.length,
+    });
+    pendingAssetId = upload.assetId;
+    const browserOrigin = 'https://vidi-roan.vercel.app';
+    const preflight = await fetch(upload.uploadUrl, {
+      method: 'OPTIONS',
+      headers: {
+        Origin: browserOrigin,
+        'Access-Control-Request-Method': 'PUT',
+        'Access-Control-Request-Headers': 'content-type',
+      },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (
+      !preflight.ok ||
+      !['*', browserOrigin].includes(preflight.headers.get('access-control-allow-origin'))
+    )
+      throw new Error('STORAGE_CHECK_CORS');
+    const put = await fetch(upload.uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'image/png' },
+      body: bytes,
+      signal: AbortSignal.timeout(20000),
+    });
+    if (!put.ok) throw new Error(`STORAGE_CHECK_UPLOAD_${put.status}`);
+    await call(`/api/assets/${upload.assetId}`, {});
+    const listed = await call(`/api/assets?workspaceId=${workspaceId}`);
+    if (!listed.assets.some((a) => a.id === upload.assetId)) throw new Error('STORAGE_CHECK_LIST');
+    const download = await call(`/api/assets/${upload.assetId}`);
+    const unsigned = new URL(download.url);
+    unsigned.search = '';
+    const privateRead = await fetch(unsigned, { signal: AbortSignal.timeout(15000) });
+    if (![401, 403, 404].includes(privateRead.status))
+      throw new Error('STORAGE_CHECK_PRIVATE_ACCESS');
+    const media = await fetch(download.url, { signal: AbortSignal.timeout(20000) });
+    if (!media.ok || !Buffer.from(await media.arrayBuffer()).equals(bytes))
+      throw new Error('STORAGE_CHECK_DOWNLOAD');
+    await call(`/api/assets/${upload.assetId}`, {}, 200, 'DELETE');
+    pendingAssetId = null;
+    const after = await call(`/api/assets?workspaceId=${workspaceId}`);
+    if (after.assets.some((a) => a.id === upload.assetId)) throw new Error('STORAGE_CHECK_DELETE');
+    console.log(
+      JSON.stringify({
+        check: 'STORAGE_LIVE_VERIFIED',
+        upload: true,
+        confirmation: true,
+        listing: true,
+        signedDownload: true,
+        privateAccess: true,
+        deletion: true,
+        cors: true,
+      }),
+    );
+  }
   await call('/api/auth/logout', {});
   await call('/api/auth/session', undefined, 401);
   await call('/api/auth/login', { email, password });
@@ -103,6 +166,7 @@ try {
   );
 } finally {
   try {
+    if (pendingAssetId) await call(`/api/assets/${pendingAssetId}`, {}, 200, 'DELETE');
     // Only this randomly named test account and its workspace belong to the test.
     const own = await db.user.findUnique({
       where: { email },
