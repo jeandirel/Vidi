@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     } else {
       if (!guestScriptsEnabled())
         throw new ApiError(401, 'Connectez-vous pour accéder au générateur de scripts.');
-      if (process.env.REDIS_URL) {
+      if (process.env.REDIS_URL || process.env.DATABASE_URL) {
         await rateLimit('scripts:guest:global', 10, 60);
         await rateLimit('scripts:guest:day', 100, 86400);
       } else guestLimit();
