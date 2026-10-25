@@ -1,3 +1,4 @@
+import { storageConfigured } from '@/lib/storage';
 import { billingConfigured } from '@/lib/billing';
 import { llmConfigured, guestScriptsEnabled } from '@/lib/llm';
 export async function GET() {
@@ -11,7 +12,7 @@ export async function GET() {
       process.env.VIDEO_OUTPUT_HOSTS &&
       process.env.REDIS_URL
     ),
-    storage: !!process.env.S3_BUCKET,
+    storage: storageConfigured(),
     billing: billingConfigured(),
     trends: false,
     ecommerce: false,
