@@ -1,6 +1,6 @@
 # Raccorder Vidi à Neon
 
-Le compte Neon connecté appartient à une organisation gérée par Vercel. La création d’un projet depuis l’API Neon est refusée pour cette organisation ; créer la ressource dans Vercel, projet **Vidi → Storage → Create Database → Neon**, avec l’offre **Free**. Ne pas changer le plan de l’organisation. Aucune base Vidi n’a été créée automatiquement pendant cette préparation.
+Le compte Neon connecté appartient à une organisation gérée par Vercel. La création d’un projet depuis l’API Neon est refusée pour cette organisation ; créer la ressource dans Vercel, projet **Vidi → Storage → Create Database → Neon**, avec l’offre **Free**. Ne pas changer le plan de l’organisation. La ressource `bold-smoke-96008102` a été créée par le propriétaire dans Vercel. La branche principale est `br-hidden-tree-b77z44h9` ; la branche de validation est `br-royal-art-b7jr3bd5` (`vidi-preview`). Les connexions Vercel Preview et Production sont séparées.
 
 ## Configuration
 
@@ -20,3 +20,9 @@ Redis reste nécessaire pour BullMQ et les workers de rendu vidéo. Un Redis con
 ## Coûts et disponibilité
 
 L’organisation connectée indique une offre Free. Les limites applicables doivent être contrôlées dans Vercel/Neon avant ouverture publique. Aucun passage à une offre payante n’est automatique dans ce code. La génération de scripts utilise le modèle gratuit déjà connecté à Vercel AI Gateway ; elle ne dépend pas de la création de cette base.
+
+## Migration depuis Vercel
+
+`VIDI_DB_SETUP=true` active l’exécution de `prisma migrate deploy` avant le build, avec `DATABASE_URL_UNPOOLED` (connexion directe). Les sorties ne révèlent pas la chaîne de connexion. Sans ce drapeau, aucun schéma n’est modifié pendant le build.
+
+`VIDI_CLOUD_SMOKE=true` lance un contrôle opt-in du serveur Next compilé sur localhost dans le build : inscription d’un compte jetable, session, sauvegarde/réouverture/recherche d’un projet, déconnexion et reconnexion. Seuls le résultat des contrôles et les erreurs sans secrets sont affichés. Le compte de test et son espace sont supprimés après vérification ; aucun rendu vidéo ni appel LLM n’est déclenché. Désactiver ce contrôle après validation.
