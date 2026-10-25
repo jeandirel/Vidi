@@ -91,3 +91,7 @@ Portraits photographiques de prévisualisation provenant d’Unsplash, référen
 ## Laboratoire de campagnes
 
 Le menu **Laboratoire** rassemble brief de marque, arguments sourcés, variantes isolant une accroche ou un CTA, import CSV de résultats avec confirmation, métriques calculées et dossier JSON exportable. Il ne lance aucun rendu vidéo ni publicité. [Guide](docs/campaign-lab.md) · [Analyse de huit acteurs et priorités](docs/ugc-market-benchmark.md).
+
+## Connexions et moteur média
+
+**Mon espace** inclut maintenant les connexions catalogue Shopify/WooCommerce, YouTube Data API et les profils vocaux avec déclaration/révocation des droits. Les clés de tendances sont chiffrées par workspace. Le moteur natif `apps/media` produit réellement des MP4 avec FFmpeg et possède des adaptateurs Chatterbox/MuseTalk ; ces derniers exigent modèles et matériel à valider. Les services externes ne sont pas activés sans leurs accès. [Activation et limites](docs/service-activation.md) · [Serveur média](apps/media/README.md).

@@ -12,6 +12,7 @@ export async function POST(request: Request) {
     if (!billing) throw new ApiError(404, 'Aucun abonnement enregistré.');
     const session = await stripeClient().billingPortal.sessions.create({
       customer: billing.customerId,
+      configuration: process.env.STRIPE_PORTAL_CONFIGURATION || undefined,
       return_url: new URL(process.env.APP_URL!).origin,
     });
     return Response.json({ url: session.url });

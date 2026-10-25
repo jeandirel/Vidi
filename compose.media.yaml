@@ -1,0 +1,22 @@
+# Optional self-hosted gateway. Requires an HTTPS reverse proxy for the Node worker.
+services:
+  media:
+    profiles: [media]
+    build:
+      context: ./apps/media
+      args:
+        INSTALL_TTS: ${MEDIA_INSTALL_TTS:-false}
+    environment:
+      MEDIA_GATEWAY_TOKEN: ${MEDIA_GATEWAY_TOKEN:-}
+      MEDIA_TRANSFER_HOSTS: ${MEDIA_TRANSFER_HOSTS:-}
+      MEDIA_ENABLE_TTS: ${MEDIA_ENABLE_TTS:-false}
+      MEDIA_DEVICE: ${MEDIA_DEVICE:-cpu}
+      MEDIA_ACTOR_LIBRARY: /models/actors
+      MEDIA_VOICE_LIBRARY: /models/voices
+      MUSETALK_ROOT: /models/musetalk
+      MUSETALK_PYTHON: /models/musetalk/.venv/bin/python
+    ports: ['127.0.0.1:8000:8000']
+    volumes: ['media-data:/data', './models:/models:ro']
+    restart: unless-stopped
+volumes:
+  media-data:

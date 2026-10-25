@@ -28,3 +28,17 @@ export function renderQueue() {
   queue.on('error', () => console.error('Render queue unavailable'));
   return queue;
 }
+
+export function voiceQueue() {
+  const queue = new Queue('vidi-voices', {
+    connection: redisOptions(),
+    defaultJobOptions: {
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 10000 },
+      removeOnComplete: 1000,
+      removeOnFail: 1000,
+    },
+  });
+  queue.on('error', () => console.error('Voice queue unavailable'));
+  return queue;
+}

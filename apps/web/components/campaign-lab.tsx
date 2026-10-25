@@ -18,6 +18,7 @@ import {
   type Variant,
 } from '@vidi/core';
 import Icon from './icon';
+import CreativeReferences from './creative-references';
 
 type Props = {
   project: ProjectInput;
@@ -302,6 +303,7 @@ export default function CampaignLab({
         </button>
       </div>
       <fieldset className="editor-fieldset" disabled={busy || reading}>
+        {tab === 'brief' ? <CreativeReferences project={p} update={update} /> : null}
         {tab === 'brief' ? (
           <div className="lab-columns">
             <section className="lab-card">

@@ -44,3 +44,13 @@ La cible reste l’ensemble du cahier des charges fourni. Cette première livrai
 ## Livraison laboratoire de campagnes — 25 octobre 2026
 
 Brief par projet, preuves déclarées, tests de scripts à variable unique, import CSV validé avec confirmation et provenance, calcul CTR/CPA/ROAS et export JSON sont livrés. Le brief alimente le LLM ; preuves et résultats persistent dans les projets locaux/cloud. Aucun moteur vidéo supplémentaire ni compte publicitaire n’est activé. [Détail et limites](campaign-lab.md) · [Analyse concurrentielle](ugc-market-benchmark.md).
+
+## Livraison connexions et média — 25 octobre 2026
+
+- Connecteurs de catalogue public Shopify Storefront / WooCommerce Store API, pagination, prix sourcés et avis WooCommerce ; confirmation avant remplacement dans le studio. Admin OAuth et avis Shopify tiers non livrés.
+- Connecteur YouTube Data API par workspace, clé chiffrée et références annotables pour le LLM. Pas de faux classement UGC TikTok ; pas de serveur MCP autonome.
+- Profils vocaux, déclaration/révocation, tâches vocales asynchrones et contrôle de rôle/plan ; modèles Chatterbox à installer et tester sur machine cible.
+- Service média privé et persistant : vrai MP4 FFmpeg testé ; adaptateur MuseTalk et catalogue d’acteurs/voix opérateur. Machine, Redis/worker actifs et modèles restent nécessaires pour l’activation cloud.
+- Provisionnement Stripe préparé par script explicite, sans paiement créé. Choix du compte, clés, configuration et paiement de test restent nécessaires.
+
+Voir [le détail des activations](service-activation.md) et [les limites du moteur](../apps/media/README.md). Cette livraison ne déclare pas ces services « connectés » sans configuration réelle.

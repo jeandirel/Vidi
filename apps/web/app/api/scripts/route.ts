@@ -13,7 +13,14 @@ const schema = z.object({
   duration: z.union([z.literal(15), z.literal(30), z.literal(60)]),
   dataConsent: z.literal(true),
   creativeContext: z
-    .object({ brief: brandBriefSchema, evidence: z.array(evidenceSchema).max(8) })
+    .object({
+      brief: brandBriefSchema,
+      evidence: z.array(evidenceSchema).max(8),
+      inspiration: z
+        .array(z.object({ title: z.string().max(1000), note: z.string().max(600) }))
+        .max(8)
+        .optional(),
+    })
     .optional(),
 });
 export async function POST(request: Request) {

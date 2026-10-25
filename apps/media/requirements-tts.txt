@@ -1,0 +1,2 @@
+# Optional model environment. MuseTalk must use its own environment (see README).
+chatterbox-tts==0.1.7

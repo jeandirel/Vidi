@@ -4,6 +4,18 @@ export * from './campaign';
 
 export const productSchema = z.object({
   name: z.string().trim().min(2).max(120),
+  commerce: z
+    .object({
+      provider: z.enum(['shopify', 'woocommerce']),
+      externalId: z.string().max(200),
+      price: z
+        .string()
+        .regex(/^\d+(?:\.\d+)?$/)
+        .max(40),
+      currency: z.string().max(8),
+      checkedAt: z.string().datetime(),
+    })
+    .optional(),
   description: z.string().trim().min(10).max(4000),
   url: z
     .union([
@@ -53,6 +65,19 @@ export const projectSchema = z
     captions: z.boolean(),
     clips: z.array(clipSchema).max(30),
     campaign: campaignSchema.optional(),
+    media: z
+      .object({
+        kind: z.enum(['product', 'avatar']),
+        narration: z.enum(['none', 'standard', 'clone']),
+        voiceProfileId: z.string().max(100).optional(),
+      })
+      .superRefine((m, ctx) => {
+        if (m.narration === 'clone' && !m.voiceProfileId)
+          ctx.addIssue({ code: 'custom', message: 'Choisissez une voix autorisée.' });
+        if (m.kind === 'avatar' && m.narration === 'none')
+          ctx.addIssue({ code: 'custom', message: 'Un avatar parlant nécessite une narration.' });
+      })
+      .optional(),
   })
   .superRefine((p, ctx) => {
     for (const c of p.clips)

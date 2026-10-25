@@ -78,7 +78,7 @@ export default function AssetLibrary({
             ref={input}
             disabled={busy}
             type="file"
-            accept="image/jpeg,image/png,image/webp,video/mp4,audio/mpeg"
+            accept="image/jpeg,image/png,image/webp,video/mp4,audio/mpeg,audio/wav"
             onChange={(e) => void upload(e.target.files?.[0])}
             hidden
           />
