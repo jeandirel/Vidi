@@ -28,14 +28,29 @@ const base = {
   clips: [],
 } as const;
 test.each([
+  [6, '720p', 1],
   [15, '720p', 1],
   [30, '720p', 2],
+  [45, '1080p', 6],
   [60, '1080p', 8],
+  [90, '1080p', 12],
   [15, '4k', 4],
   [60, '4k', 16],
+  [90, '4k', 24],
 ] as const)('pricing duration %i / %s costs %i credits', (duration, resolution, cost) =>
   expect(renderCost(duration, resolution)).toBe(cost),
 );
+test('accepts caption clip track and extended durations', () => {
+  const parsed = projectSchema.safeParse({
+    ...base,
+    duration: 90,
+    clips: [
+      { id: 'c1', kind: 'avatar', label: 'Avatar', start: 0, duration: 90 },
+      { id: 'c2', kind: 'caption', label: 'Sous-titres', start: 0, duration: 90 },
+    ],
+  });
+  expect(parsed.success).toBe(true);
+});
 test('plan restrictions are enforced independently of client settings', () => {
   expect(canRender('starter', '1080p')).toBe(false);
   expect(canRender('pro', '4k')).toBe(false);

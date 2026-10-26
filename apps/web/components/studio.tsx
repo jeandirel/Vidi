@@ -319,7 +319,7 @@ export default function Studio() {
         />
       ) : null}
       <aside className={`sidebar ${mobileOpen ? 'mobile-open' : ''}`}>
-        <a className="brand" href="/" aria-label="Vidi, accueil">
+        <a className="brand" href="/app" aria-label="Vidi Studio">
           <span className="brand-symbol">
             <span />
             <span />

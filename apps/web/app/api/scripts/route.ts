@@ -10,7 +10,14 @@ const schema = z.object({
   workspaceId: z.string().default(''),
   product: productSchema,
   language: z.enum(['fr', 'en', 'es', 'de', 'pt']),
-  duration: z.union([z.literal(15), z.literal(30), z.literal(60)]),
+  duration: z.union([
+    z.literal(6),
+    z.literal(15),
+    z.literal(30),
+    z.literal(45),
+    z.literal(60),
+    z.literal(90),
+  ]),
   dataConsent: z.literal(true),
   creativeContext: z
     .object({

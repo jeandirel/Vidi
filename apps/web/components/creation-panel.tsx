@@ -49,7 +49,7 @@ export default function CreationPanel({
     reader.onerror = () => notify('Cette image n’a pas pu être lue.');
     reader.readAsDataURL(file);
   }
-  function changeDuration(value: 15 | 30 | 60) {
+  function changeDuration(value: ProjectInput['duration']) {
     update({
       ...p,
       duration: value,
@@ -84,6 +84,14 @@ export default function CreationPanel({
       notify('Maximum 30 segments par projet.');
       return;
     }
+    const label =
+      kind === 'product'
+        ? 'Plan produit'
+        : kind === 'caption'
+          ? 'Sous-titres mot-à-mot'
+          : kind === 'avatar'
+            ? 'Piste avatar'
+            : 'Ambiance sonore';
     update({
       ...p,
       clips: [
@@ -91,7 +99,7 @@ export default function CreationPanel({
         {
           id: crypto.randomUUID(),
           kind,
-          label: kind === 'product' ? 'Plan produit' : 'Ambiance sonore',
+          label,
           start: 0,
           duration: p.duration,
         },
@@ -297,7 +305,7 @@ export default function CreationPanel({
             <div className="field">
               Durée
               <div className="segmented">
-                {([15, 30, 60] as const).map((n) => (
+                {([6, 15, 30, 45, 60, 90] as const).map((n) => (
                   <button
                     key={n}
                     className={p.duration === n ? 'selected' : ''}
@@ -358,6 +366,63 @@ export default function CreationPanel({
                 Rédiger avec l’IA
               </button>
             </div>
+          </div>
+          <div className="framework-selector-row">
+            <span className="framework-label">Structure :</span>
+            <button
+              type="button"
+              className="framework-pill"
+              onClick={() => {
+                const prod = p.product;
+                const b = prod.benefits.filter(Boolean)[0] || 'une efficacité remarquable';
+                update({
+                  ...p,
+                  script: {
+                    hook: `Si vous en avez marre de perdre du temps avec ${prod.name.toLowerCase()}, regardez ça.`,
+                    body: `La plupart des solutions classiques s’évaporent sans agir. Avec ${prod.name}, vous profitez de ${b}. ${prod.description}`,
+                    cta: `Profitez de l'offre spéciale dès aujourd'hui sur notre boutique.`,
+                  },
+                });
+              }}
+            >
+              PAS (Problème/Solution)
+            </button>
+            <button
+              type="button"
+              className="framework-pill"
+              onClick={() => {
+                const prod = p.product;
+                const b = prod.benefits.filter(Boolean)[0] || 'un résultat visible dès le premier jour';
+                update({
+                  ...p,
+                  script: {
+                    hook: `Pourquoi tout le monde s'arrache ${prod.name} en ce moment ?`,
+                    body: `J'étais sceptique jusqu'à ce que je le teste : ${prod.description} Le résultat ? ${b}.`,
+                    cta: `Commandez le vôtre avec la livraison offerte via le lien en bio.`,
+                  },
+                });
+              }}
+            >
+              AIDA
+            </button>
+            <button
+              type="button"
+              className="framework-pill"
+              onClick={() => {
+                const prod = p.product;
+                const b = prod.benefits.filter(Boolean)[0] || 'une qualité irréprochable';
+                update({
+                  ...p,
+                  script: {
+                    hook: `Honnêtement, je ne pensais pas que ${prod.name} allait me convaincre.`,
+                    body: `Et pourtant, après une semaine d'utilisation quotidienne : ${b}. ${prod.description}`,
+                    cta: `Faites-vous votre propre avis en commandant sur le site officiel.`,
+                  },
+                });
+              }}
+            >
+              Témoignage UGC
+            </button>
           </div>
           {busy === 'script' ? (
             <div className="script-skeleton" role="status" aria-label="Rédaction en cours">
@@ -570,13 +635,21 @@ export default function CreationPanel({
                 <Icon name="audio" size={14} />
                 Audio
               </button>
+              <button className="button secondary compact" onClick={() => addClip('caption')}>
+                <Icon name="type" size={14} />
+                Sous-titres
+              </button>
             </div>
           </div>
           <div className="timeline">
             <div className="timeline-ruler">
               <span>00:00</span>
-              <span>00:{String(p.duration / 2).padStart(2, '0')}</span>
-              <span>{p.duration === 60 ? '01:00' : `00:${p.duration}`}</span>
+              <span>00:{String(Math.floor(p.duration / 2)).padStart(2, '0')}</span>
+              <span>
+                {p.duration >= 60
+                  ? `01:${String(p.duration - 60).padStart(2, '0')}`
+                  : `00:${String(p.duration).padStart(2, '0')}`}
+              </span>
             </div>
             {p.clips.map((c, i) => (
               <div

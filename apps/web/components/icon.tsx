@@ -48,6 +48,7 @@ export const icons = {
   download: ArrowDownToLine,
   back: ArrowLeft,
   next: ArrowRight,
+  arrow: ArrowRight,
   audio: AudioLines,
   check: Check,
   down: ChevronDown,
