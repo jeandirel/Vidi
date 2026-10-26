@@ -1,12 +1,19 @@
 import type { ProjectInput } from './index';
 
 export const HEYGEN_AVATARS: Record<ProjectInput['avatarId'], string> = {
-  lea: 'Daisy-inskirt-20220818',
-  marcus: 'Tyler-incasualsuit-20220721',
-  maya: 'Kristin_expressive_20240415',
-  alex: 'Eric_expressive_20240415',
-  ines: 'Monica_expressive_20240412',
-  kenji: 'Shawn_expressive_20240415',
+  lea: 'Abigail_expressive_2024112501',
+  marcus: 'Aditya_public_4',
+  maya: 'Kristin_public_3_20240108',
+  alex: 'Aditya_public_1',
+  ines: 'Chloe_expressive_2024120201',
+  kenji: 'Shawn_Business_Front_public',
+};
+
+export const HEYGEN_VOICES: Record<string, string> = {
+  claire: 'b11a7dbb250f483eadad9fb253e7d313', // Solange - French female
+  noah: '341b4807e5e6455fa88f34bda5d6eeea', // Tanguy - French male
+  amina: 'e0390ce7cd64499a8d24f56ccf905437', // Chantal - French female
+  james: '80b17a1be1594e578b92c0ddf4a37fc8', // Lewis - English male
 };
 
 export const HEYGEN_DIMENSIONS: Record<
@@ -38,6 +45,17 @@ export function buildHeyGenPayload(project: ProjectInput, testMode = false) {
     .filter(Boolean)
     .join(' ');
 
+  // Determine appropriate HeyGen voice
+  let voiceId = HEYGEN_VOICES[project.voiceId];
+  if (!voiceId) {
+    const isMale = ['marcus', 'alex', 'kenji'].includes(project.avatarId);
+    if (project.language === 'en') {
+      voiceId = isMale ? HEYGEN_VOICES.james : '31001ed1e3e54c79a88458cb03ca123a';
+    } else {
+      voiceId = isMale ? HEYGEN_VOICES.noah : HEYGEN_VOICES.claire;
+    }
+  }
+
   return {
     video_inputs: [
       {
@@ -49,6 +67,7 @@ export function buildHeyGenPayload(project: ProjectInput, testMode = false) {
         voice: {
           type: 'text',
           input_text: fullText,
+          voice_id: voiceId,
           speed: 1.0,
         },
         background: {
@@ -93,14 +112,16 @@ export async function generateHeyGenVideo({
   }
 
   const data = (await res.json()) as {
-    code: number;
+    code?: number;
+    error?: { message?: string } | null;
     data?: { video_id?: string };
     message?: string;
   };
 
   const videoId = data.data?.video_id;
   if (!videoId) {
-    throw new Error(data.message || 'HeyGen failed to return video_id');
+    const errMsg = data.error?.message || data.message || 'HeyGen failed to return video_id';
+    throw new Error(errMsg);
   }
 
   // 2. Poll for video completion (up to 10 minutes)
