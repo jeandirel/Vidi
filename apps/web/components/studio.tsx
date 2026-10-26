@@ -89,14 +89,96 @@ export default function Studio() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [undoStack, setUndoStack] = useState<ProjectInput[]>([]);
+  const [redoStack, setRedoStack] = useState<ProjectInput[]>([]);
+
+  const projectRef = useRef(project);
+  projectRef.current = project;
+  const undoStackRef = useRef(undoStack);
+  undoStackRef.current = undoStack;
+  const redoStackRef = useRef(redoStack);
+  redoStackRef.current = redoStack;
+
   const renderKey = useRef<string | null>(null);
   const workspace = session?.workspaces.find((w) => w.id === workspaceId);
-  function update(next: ProjectInput) {
+
+  function update(next: ProjectInput, recordHistory = true) {
+    if (recordHistory) {
+      setUndoStack((prev) => [...prev.slice(-30), projectRef.current]);
+      setRedoStack([]);
+    }
     setCloudDirty(true);
     setProject(next);
     setSaved(false);
     renderKey.current = null;
   }
+
+  function handleUndo() {
+    if (undoStackRef.current.length === 0) return;
+    const previous = undoStackRef.current[undoStackRef.current.length - 1];
+    setUndoStack((prev) => prev.slice(0, -1));
+    setRedoStack((prev) => [...prev, projectRef.current]);
+    setCloudDirty(true);
+    setProject(previous);
+    setSaved(false);
+    renderKey.current = null;
+    setNotice('Action annulée (historique).');
+  }
+
+  function handleRedo() {
+    if (redoStackRef.current.length === 0) return;
+    const next = redoStackRef.current[redoStackRef.current.length - 1];
+    setRedoStack((prev) => prev.slice(0, -1));
+    setUndoStack((prev) => [...prev, projectRef.current]);
+    setCloudDirty(true);
+    setProject(next);
+    setSaved(false);
+    renderKey.current = null;
+    setNotice('Action rétablie (historique).');
+  }
+
+  useEffect(() => {
+    if (!isPlaying) return;
+    const timer = setInterval(() => {
+      setCurrentTime((prev) => {
+        const next = Math.round((prev + 0.1) * 10) / 10;
+        if (next >= projectRef.current.duration) {
+          setIsPlaying(false);
+          return 0;
+        }
+        return next;
+      });
+    }, 100);
+    return () => clearInterval(timer);
+  }, [isPlaying]);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      const activeTag = document.activeElement?.tagName;
+      if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') {
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        if (e.shiftKey) {
+          e.preventDefault();
+          handleRedo();
+        } else {
+          e.preventDefault();
+          handleUndo();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        handleRedo();
+      } else if (e.code === 'Space') {
+        e.preventDefault();
+        setIsPlaying((p) => !p);
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
   async function refreshSession() {
     try {
       const data = await api<Session>('/api/auth/session');
@@ -164,6 +246,10 @@ export default function Studio() {
       product: { ...emptyProject.product },
       script: { ...emptyProject.script },
     });
+    setUndoStack([]);
+    setRedoStack([]);
+    setCurrentTime(0);
+    setIsPlaying(false);
     setDraftId(crypto.randomUUID());
     setCloudId(null);
     setSaved(false);
@@ -183,6 +269,10 @@ export default function Studio() {
   }
   function openDraft(draft: Draft) {
     setProject(draft.data);
+    setUndoStack([]);
+    setRedoStack([]);
+    setCurrentTime(0);
+    setIsPlaying(false);
     setDraftId(draft.id);
     setCloudId(null);
     setStep(0);
@@ -550,6 +640,14 @@ export default function Studio() {
                         onCompose={() => void generateScript()}
                         onAI={() => void generateScript(true)}
                         notify={setNotice}
+                        currentTime={currentTime}
+                        onSeek={setCurrentTime}
+                        isPlaying={isPlaying}
+                        onTogglePlay={() => setIsPlaying((p) => !p)}
+                        canUndo={undoStack.length > 0}
+                        canRedo={redoStack.length > 0}
+                        onUndo={handleUndo}
+                        onRedo={handleRedo}
                       />
                     </fieldset>
                   </div>
@@ -596,6 +694,10 @@ export default function Studio() {
                   onRender={() => void render()}
                   busy={busy === 'render'}
                   videoConnected={!!capabilities?.video}
+                  currentTime={currentTime}
+                  onSeek={setCurrentTime}
+                  isPlaying={isPlaying}
+                  onTogglePlay={() => setIsPlaying((p) => !p)}
                 />
               </div>
               {cloudId && workspace ? (

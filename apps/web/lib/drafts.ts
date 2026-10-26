@@ -37,6 +37,7 @@ export const emptyProject: ProjectInput = {
   duration: 15,
   resolution: '720p',
   captions: true,
+  subtitleStyle: 'tiktok-punchy',
   clips: [
     { id: 'avatar-1', label: 'Présentation', kind: 'avatar', start: 0, duration: 15 },
     { id: 'caption-1', label: 'Sous-titres', kind: 'caption', start: 0, duration: 15 },

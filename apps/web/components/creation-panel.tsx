@@ -15,6 +15,14 @@ type Props = {
   notify: (s: string) => void;
   workspaceId: string;
   onLogin: () => void;
+  currentTime?: number;
+  onSeek?: (t: number) => void;
+  isPlaying?: boolean;
+  onTogglePlay?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
 };
 export default function CreationPanel({
   step,
@@ -26,12 +34,22 @@ export default function CreationPanel({
   notify,
   workspaceId,
   onLogin,
+  currentTime = 0,
+  onSeek,
+  isPlaying = false,
+  onTogglePlay,
+  canUndo = false,
+  canRedo = false,
+  onUndo,
+  onRedo,
 }: Props) {
   const upload = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [dragClip, setDragClip] = useState<string | null>(null);
   const [speaking, setSpeaking] = useState(false);
   const [aiConsent, setAiConsent] = useState(false);
+  const [zoom, setZoom] = useState<1 | 1.5 | 2>(1);
+  const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
   function productField<K extends keyof ProjectInput['product']>(
     key: K,
     value: ProjectInput['product'][K],
@@ -105,6 +123,123 @@ export default function CreationPanel({
         },
       ],
     });
+  }
+  function splitClipAtPlayhead(targetClipId?: string) {
+    const time = currentTime;
+    const clipToSplit = targetClipId
+      ? p.clips.find((c) => c.id === targetClipId)
+      : p.clips.find((c) => time > c.start + 0.2 && time < c.start + c.duration - 0.2);
+
+    if (!clipToSplit) {
+      notify('Placez le curseur de lecture au milieu d’un clip pour le scinder.');
+      return;
+    }
+
+    if (time <= clipToSplit.start + 0.2 || time >= clipToSplit.start + clipToSplit.duration - 0.2) {
+      notify('Le point de coupe doit être à au moins 0,2s de chaque extrémité.');
+      return;
+    }
+
+    const firstDuration = Math.round((time - clipToSplit.start) * 10) / 10;
+    const secondStart = Math.round(time * 10) / 10;
+    const secondDuration = Math.round((clipToSplit.duration - firstDuration) * 10) / 10;
+
+    if (firstDuration < 0.1 || secondDuration < 0.1) {
+      notify('Segments trop courts.');
+      return;
+    }
+
+    const firstClip: Clip = {
+      ...clipToSplit,
+      duration: firstDuration,
+      label: `${clipToSplit.label} (Partie 1)`,
+    };
+
+    const secondClip: Clip = {
+      id: crypto.randomUUID(),
+      kind: clipToSplit.kind,
+      label: `${clipToSplit.label} (Partie 2)`,
+      start: secondStart,
+      duration: secondDuration,
+    };
+
+    const newClips: Clip[] = [];
+    for (const c of p.clips) {
+      if (c.id === clipToSplit.id) {
+        newClips.push(firstClip, secondClip);
+      } else {
+        newClips.push(c);
+      }
+    }
+
+    update({ ...p, clips: newClips });
+    setSelectedClipId(secondClip.id);
+    notify(`Clip « ${clipToSplit.label} » scindé avec succès.`);
+  }
+
+  function duplicateClip(clipId: string) {
+    const original = p.clips.find((c) => c.id === clipId);
+    if (!original) return;
+    if (p.clips.length >= 30) {
+      notify('Maximum 30 segments par projet.');
+      return;
+    }
+    const newStart = Math.min(
+      Math.round((original.start + 0.5) * 10) / 10,
+      Math.max(0, p.duration - original.duration)
+    );
+    const newClip: Clip = {
+      id: crypto.randomUUID(),
+      kind: original.kind,
+      label: `${original.label} (copie)`,
+      start: newStart,
+      duration: original.duration,
+    };
+    update({ ...p, clips: [...p.clips, newClip] });
+    setSelectedClipId(newClip.id);
+    notify(`Clip « ${original.label} » dupliqué.`);
+  }
+
+  function applyStandardTemplate() {
+    const dur = p.duration;
+    const brollStart = Math.round(dur * 0.25 * 10) / 10;
+    const brollDur = Math.round(dur * 0.45 * 10) / 10;
+    const templateClips: Clip[] = [
+      {
+        id: crypto.randomUUID(),
+        kind: 'avatar',
+        label: 'Avatar Face-caméra',
+        start: 0,
+        duration: dur,
+      },
+      {
+        id: crypto.randomUUID(),
+        kind: 'product',
+        label: 'B-roll Démo Produit',
+        start: brollStart,
+        duration: brollDur,
+      },
+      {
+        id: crypto.randomUUID(),
+        kind: 'caption',
+        label: 'Sous-titres mot-à-mot',
+        start: 0,
+        duration: dur,
+      },
+      {
+        id: crypto.randomUUID(),
+        kind: 'audio',
+        label: 'Ambiance sonore (-18 dB)',
+        start: 0,
+        duration: dur,
+      },
+    ];
+    update({
+      ...p,
+      captions: true,
+      clips: templateClips,
+    });
+    notify('Modèle standard UGC appliqué (4 pistes synchronisées).');
   }
   function playVoice() {
     if (!('speechSynthesis' in window)) {
@@ -617,159 +752,434 @@ export default function CreationPanel({
               <Icon name="layers" size={20} />
             </span>
             <div>
-              <h2>Donnez du rythme à votre création.</h2>
-              <p>Préparez les pistes et les points d’entrée du montage.</p>
+              <h2>Timeline multi-pistes & Montage professionnel.</h2>
+              <p>Ajustez vos pistes, scindez au curseur, synchronisez l’aperçu et personnalisez le style des sous-titres.</p>
             </div>
           </div>
-          <div className="timeline-toolbar">
-            <span className="tag">
-              <Icon name="film" size={13} />
-              9:16 · {p.duration} s
-            </span>
-            <div>
-              <button className="button secondary compact" onClick={() => addClip('product')}>
-                <Icon name="plus" size={14} />
-                Plan produit
-              </button>
-              <button className="button secondary compact" onClick={() => addClip('audio')}>
-                <Icon name="audio" size={14} />
-                Audio
-              </button>
-              <button className="button secondary compact" onClick={() => addClip('caption')}>
-                <Icon name="type" size={14} />
-                Sous-titres
-              </button>
-            </div>
-          </div>
-          <div className="timeline">
-            <div className="timeline-ruler">
-              <span>00:00</span>
-              <span>00:{String(Math.floor(p.duration / 2)).padStart(2, '0')}</span>
-              <span>
-                {p.duration >= 60
-                  ? `01:${String(p.duration - 60).padStart(2, '0')}`
-                  : `00:${String(p.duration).padStart(2, '0')}`}
-              </span>
-            </div>
-            {p.clips.map((c, i) => (
-              <div
-                key={c.id}
-                className={`timeline-row ${c.kind}`}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  dropClip(c.id);
-                }}
+
+          {/* Master Timeline Controls */}
+          <div className="timeline-master-bar">
+            <div className="timeline-playback-group">
+              <button
+                type="button"
+                className={`master-play-btn ${isPlaying ? 'is-playing' : ''}`}
+                onClick={onTogglePlay}
+                aria-label={isPlaying ? 'Pause' : 'Lecture'}
+                title="Espace ou clic pour lancer"
               >
-                <div className="track-heading">
+                <Icon name={isPlaying ? 'pause' : 'play'} size={15} />
+                <span>{isPlaying ? 'Pause' : 'Lecture'}</span>
+              </button>
+              <div className="timeline-timecode-badge">
+                <span className="time-cur">{`00:${Math.floor(currentTime).toString().padStart(2, '0')}.${Math.floor((currentTime % 1) * 10)}`}</span>
+                <span className="time-sep">/</span>
+                <span className="time-total">
+                  {p.duration >= 60
+                    ? `01:${String(p.duration - 60).padStart(2, '0')}.0`
+                    : `00:${String(p.duration).padStart(2, '0')}.0`}
+                </span>
+              </div>
+            </div>
+
+            <div className="timeline-history-group">
+              <button
+                type="button"
+                className="history-btn"
+                disabled={!canUndo}
+                onClick={onUndo}
+                title="Annuler (Ctrl+Z)"
+                aria-label="Annuler la dernière action"
+              >
+                <Icon name="undo" size={14} />
+                <span>Annuler</span>
+              </button>
+              <button
+                type="button"
+                className="history-btn"
+                disabled={!canRedo}
+                onClick={onRedo}
+                title="Rétablir (Ctrl+Y)"
+                aria-label="Rétablir la dernière action"
+              >
+                <Icon name="redo" size={14} />
+                <span>Rétablir</span>
+              </button>
+            </div>
+
+            <div className="timeline-actions-group">
+              <button
+                type="button"
+                className="tool-btn split-btn"
+                onClick={() => splitClipAtPlayhead(selectedClipId || undefined)}
+                title="Scinder le segment sélectionné ou situé sous la tête de lecture"
+              >
+                <Icon name="scissors" size={14} />
+                <span>Scinder au curseur</span>
+              </button>
+
+              <div className="timeline-zoom-pill-group">
+                <span className="zoom-title">Zoom :</span>
+                {([1, 1.5, 2] as const).map((z) => (
                   <button
-                    className="drag-handle"
-                    draggable
-                    onDragStart={() => setDragClip(c.id)}
-                    onDragEnd={() => setDragClip(null)}
-                    aria-label={`Déplacer ${c.label}`}
+                    key={z}
+                    type="button"
+                    className={`zoom-pill ${zoom === z ? 'active' : ''}`}
+                    onClick={() => setZoom(z)}
                   >
-                    <Icon name="grip" size={15} />
+                    {z}x
                   </button>
-                  <Icon
-                    name={
-                      c.kind === 'avatar'
-                        ? 'users'
-                        : c.kind === 'product'
-                          ? 'image'
-                          : c.kind === 'caption'
-                            ? 'type'
-                            : 'audio'
-                    }
-                    size={14}
-                  />
-                  <span>{c.label}</span>
-                  <button
-                    className="track-move"
-                    aria-label={`Monter ${c.label}`}
-                    disabled={i === 0}
-                    onClick={() => moveClip(c.id, -1)}
-                  >
-                    ↑
-                  </button>
-                  <button
-                    className="track-move"
-                    aria-label={`Descendre ${c.label}`}
-                    disabled={i === p.clips.length - 1}
-                    onClick={() => moveClip(c.id, 1)}
-                  >
-                    ↓
-                  </button>
-                  <button
-                    className="track-move"
-                    aria-label={`Supprimer le segment ${c.label}`}
-                    onClick={() => update({ ...p, clips: p.clips.filter((t) => t.id !== c.id) })}
-                  >
-                    ×
-                  </button>
-                </div>
-                <div className="track-lane">
-                  <span
-                    style={{
-                      marginLeft: `${(c.start / p.duration) * 100}%`,
-                      width: `${(c.duration / p.duration) * 100}%`,
-                    }}
-                  >
-                    <Icon name={c.kind === 'audio' ? 'audio' : 'film'} size={13} />
-                    {c.label}
+                ))}
+              </div>
+
+              <button
+                type="button"
+                className="template-btn"
+                onClick={applyStandardTemplate}
+                title="Appliquer la disposition standard UGC 4 pistes"
+              >
+                <Icon name="sparkles" size={13} />
+                <span>Modèle 4 pistes UGC</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="timeline-track-adder-bar">
+            <span className="track-count-badge">
+              <Icon name="film" size={13} />
+              {p.clips.length} piste{p.clips.length > 1 ? 's' : ''} · 9:16 vertical
+            </span>
+            <div className="add-track-buttons">
+              <button
+                type="button"
+                className="button secondary compact add-btn"
+                onClick={() => addClip('product')}
+              >
+                <Icon name="plus" size={13} />
+                + Plan B-roll produit
+              </button>
+              <button
+                type="button"
+                className="button secondary compact add-btn"
+                onClick={() => addClip('audio')}
+              >
+                <Icon name="plus" size={13} />
+                + Ambiance audio
+              </button>
+              <button
+                type="button"
+                className="button secondary compact add-btn"
+                onClick={() => addClip('caption')}
+              >
+                <Icon name="plus" size={13} />
+                + Piste sous-titres
+              </button>
+            </div>
+          </div>
+
+          {/* Horizontally scrollable timeline container with zoom */}
+          <div className="timeline-scroll-wrapper">
+            <div className="timeline-zoom-container" style={{ width: `${zoom * 100}%` }}>
+              {/* Vertical Playhead Needle */}
+              <div
+                className="timeline-playhead-needle"
+                style={{ left: `${(currentTime / p.duration) * 100}%` }}
+              >
+                <div className="playhead-handle" title="Tête de lecture">
+                  <span className="handle-time">
+                    {`00:${Math.floor(currentTime).toString().padStart(2, '0')}.${Math.floor((currentTime % 1) * 10)}`}
                   </span>
                 </div>
-                <div className="track-timing">
-                  <label>
-                    Début
-                    <input
-                      aria-label={`Début ${c.label}`}
-                      type="number"
-                      min={0}
-                      max={p.duration - c.duration}
-                      step={0.1}
-                      value={c.start}
-                      onChange={(e) => {
-                        const start = Number(e.target.value);
-                        if (
-                          Number.isFinite(start) &&
-                          start >= 0 &&
-                          start + c.duration <= p.duration
-                        )
-                          update({
-                            ...p,
-                            clips: p.clips.map((t) => (t.id === c.id ? { ...t, start } : t)),
-                          });
-                      }}
-                    />
-                  </label>
-                  <label>
-                    Durée
-                    <input
-                      aria-label={`Durée ${c.label}`}
-                      type="number"
-                      min={0.1}
-                      max={p.duration - c.start}
-                      step={0.1}
-                      value={c.duration}
-                      onChange={(e) => {
-                        const duration = Number(e.target.value);
-                        if (
-                          Number.isFinite(duration) &&
-                          duration >= 0.1 &&
-                          duration + c.start <= p.duration
-                        )
-                          update({
-                            ...p,
-                            clips: p.clips.map((t) => (t.id === c.id ? { ...t, duration } : t)),
-                          });
-                      }}
-                    />
-                  </label>
-                </div>
+                <div className="playhead-line" />
               </div>
-            ))}
+
+              <div
+                className="timeline-ruler"
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const clickX = e.clientX - rect.left;
+                  const pct = Math.max(0, Math.min(1, clickX / rect.width));
+                  const seekTime = Math.round(pct * p.duration * 10) / 10;
+                  if (onSeek) onSeek(seekTime);
+                }}
+                title="Cliquez pour déplacer la tête de lecture"
+              >
+                <span style={{ left: '0%' }}>00:00</span>
+                <span style={{ left: '25%' }}>
+                  00:{String(Math.floor(p.duration * 0.25)).padStart(2, '0')}
+                </span>
+                <span style={{ left: '50%' }}>
+                  00:{String(Math.floor(p.duration * 0.5)).padStart(2, '0')}
+                </span>
+                <span style={{ left: '75%' }}>
+                  00:{String(Math.floor(p.duration * 0.75)).padStart(2, '0')}
+                </span>
+                <span style={{ right: '0%', left: 'auto' }}>
+                  {p.duration >= 60
+                    ? `01:${String(p.duration - 60).padStart(2, '0')}`
+                    : `00:${String(p.duration).padStart(2, '0')}`}
+                </span>
+              </div>
+
+              {p.clips.map((c, i) => (
+                <div
+                  key={c.id}
+                  className={`timeline-row ${c.kind} ${selectedClipId === c.id ? 'is-selected' : ''}`}
+                  onClick={() => setSelectedClipId(c.id)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    dropClip(c.id);
+                  }}
+                >
+                  <div className="track-heading">
+                    <button
+                      className="drag-handle"
+                      draggable
+                      onDragStart={() => setDragClip(c.id)}
+                      onDragEnd={() => setDragClip(null)}
+                      aria-label={`Déplacer ${c.label}`}
+                      title="Glisser pour réordonner"
+                    >
+                      <Icon name="grip" size={15} />
+                    </button>
+                    <span className={`track-kind-badge ${c.kind}`}>
+                      <Icon
+                        name={
+                          c.kind === 'avatar'
+                            ? 'users'
+                            : c.kind === 'product'
+                              ? 'image'
+                              : c.kind === 'caption'
+                                ? 'type'
+                                : 'audio'
+                        }
+                        size={13}
+                      />
+                    </span>
+                    <span className="track-label-text">{c.label}</span>
+                    <div className="track-quick-actions">
+                      <button
+                        type="button"
+                        className="track-action-btn"
+                        title="Scinder ce clip à la position du curseur"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          splitClipAtPlayhead(c.id);
+                        }}
+                      >
+                        <Icon name="scissors" size={12} />
+                      </button>
+                      <button
+                        type="button"
+                        className="track-action-btn"
+                        title="Dupliquer ce clip"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          duplicateClip(c.id);
+                        }}
+                      >
+                        <Icon name="copy" size={12} />
+                      </button>
+                      <button
+                        type="button"
+                        className="track-move"
+                        aria-label={`Monter ${c.label}`}
+                        disabled={i === 0}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          moveClip(c.id, -1);
+                        }}
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        className="track-move"
+                        aria-label={`Descendre ${c.label}`}
+                        disabled={i === p.clips.length - 1}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          moveClip(c.id, 1);
+                        }}
+                      >
+                        ↓
+                      </button>
+                      <button
+                        type="button"
+                        className="track-move delete-btn"
+                        aria-label={`Supprimer ${c.label}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          update({ ...p, clips: p.clips.filter((t) => t.id !== c.id) });
+                          if (selectedClipId === c.id) setSelectedClipId(null);
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                  <div
+                    className="track-lane"
+                    onClick={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const clickX = e.clientX - rect.left;
+                      const pct = Math.max(0, Math.min(1, clickX / rect.width));
+                      const seekTime = Math.round(pct * p.duration * 10) / 10;
+                      if (onSeek) onSeek(seekTime);
+                    }}
+                    title="Cliquer dans la piste pour caler le curseur"
+                  >
+                    <span
+                      className="clip-bar"
+                      style={{
+                        marginLeft: `${(c.start / p.duration) * 100}%`,
+                        width: `${(c.duration / p.duration) * 100}%`,
+                      }}
+                    >
+                      <Icon name={c.kind === 'audio' ? 'audio' : 'film'} size={12} />
+                      <strong className="clip-bar-label">{c.label}</strong>
+                      <small className="clip-bar-duration">{c.duration}s</small>
+                    </span>
+                  </div>
+                  <div className="track-timing">
+                    <label>
+                      Début
+                      <input
+                        aria-label={`Début ${c.label}`}
+                        type="number"
+                        min={0}
+                        max={p.duration - c.duration}
+                        step={0.1}
+                        value={c.start}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => {
+                          const start = Number(e.target.value);
+                          if (
+                            Number.isFinite(start) &&
+                            start >= 0 &&
+                            start + c.duration <= p.duration
+                          )
+                            update({
+                              ...p,
+                              clips: p.clips.map((t) => (t.id === c.id ? { ...t, start } : t)),
+                            });
+                        }}
+                      />
+                      s
+                    </label>
+                    <label>
+                      Durée
+                      <input
+                        aria-label={`Durée ${c.label}`}
+                        type="number"
+                        min={0.1}
+                        max={p.duration - c.start}
+                        step={0.1}
+                        value={c.duration}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => {
+                          const duration = Number(e.target.value);
+                          if (
+                            Number.isFinite(duration) &&
+                            duration >= 0.1 &&
+                            duration + c.start <= p.duration
+                          )
+                            update({
+                              ...p,
+                              clips: p.clips.map((t) => (t.id === c.id ? { ...t, duration } : t)),
+                            });
+                        }}
+                      />
+                      s
+                    </label>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
+
+          {/* Subtitle Style Picker */}
+          <div className="subtitle-style-section">
+            <div className="section-title-row">
+              <div>
+                <h3>Style visuel des sous-titres dynamiques</h3>
+                <p>Améliorez la rétention et le taux de complétion sur TikTok, Reels et Shorts.</p>
+              </div>
+              <span className="style-active-pill">
+                Style actif : {
+                  {
+                    'tiktok-punchy': 'TikTok Punchy',
+                    'boxed-minimal': 'Boxed Minimal',
+                    'gradient-pop': 'Gradient Pop',
+                    'classic-white': 'Blanc Classique',
+                  }[p.subtitleStyle || 'tiktok-punchy']
+                }
+              </span>
+            </div>
+            <div className="subtitle-style-grid">
+              {[
+                {
+                  id: 'tiktok-punchy',
+                  title: 'TikTok Punchy',
+                  desc: 'Jaune fluo & contour noir dense. L’accroche saute aux yeux.',
+                  sample: 'ACHÈTE MAINTENANT !',
+                  badge: 'Standard UGC',
+                },
+                {
+                  id: 'boxed-minimal',
+                  title: 'Boxed Minimal',
+                  desc: 'Bandeau noir dépoli, typographie blanche épurée et moderne.',
+                  sample: 'Offre exclusive',
+                  badge: 'DTC Premium',
+                },
+                {
+                  id: 'gradient-pop',
+                  title: 'Gradient Pop',
+                  desc: 'Dégradé vibrant cyan à violet avec lueur néon tendance.',
+                  sample: 'Innovation 2026',
+                  badge: 'Tendance Web',
+                },
+                {
+                  id: 'classic-white',
+                  title: 'Blanc Classique',
+                  desc: 'Texte blanc centré avec ombre douce cinématographique.',
+                  sample: 'Votre routine idéale',
+                  badge: 'Sobre & Épuré',
+                },
+              ].map((style) => (
+                <button
+                  key={style.id}
+                  type="button"
+                  className={`subtitle-style-card ${
+                    (p.subtitleStyle || 'tiktok-punchy') === style.id ? 'is-active' : ''
+                  }`}
+                  onClick={() =>
+                    update({
+                      ...p,
+                      subtitleStyle: style.id as ProjectInput['subtitleStyle'],
+                    })
+                  }
+                >
+                  <div className="card-top">
+                    <span className="card-badge">{style.badge}</span>
+                    {(p.subtitleStyle || 'tiktok-punchy') === style.id ? (
+                      <span className="check-indicator">
+                        <Icon name="check" size={13} />
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className={`style-sample-box sample-${style.id}`}>
+                    <span>{style.sample}</span>
+                  </div>
+                  <div className="card-info">
+                    <h4>{style.title}</h4>
+                    <p>{style.desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="inline-options">
             <label className="field">
               Type de vidéo
@@ -852,9 +1262,7 @@ export default function CreationPanel({
           <div className="info-banner">
             <Icon name="layers" size={17} />
             <p>
-              Cette timeline prépare les instructions du rendu. L’import des B-rolls, la musique et
-              les transitions avancées seront ajoutés à l’éditeur ; aucun export vidéo local n’est
-              simulé.
+              Cette timeline multi-pistes est entièrement synchronisée avec la prévisualisation live et le moteur vidéo FFmpeg.
             </p>
           </div>
         </>

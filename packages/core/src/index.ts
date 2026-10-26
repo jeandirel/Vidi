@@ -70,6 +70,9 @@ export const projectSchema = z
     ]),
     resolution: z.enum(['720p', '1080p', '4k']),
     captions: z.boolean(),
+    subtitleStyle: z
+      .enum(['tiktok-punchy', 'boxed-minimal', 'gradient-pop', 'classic-white'])
+      .default('tiktok-punchy'),
     clips: z.array(clipSchema).max(30),
     campaign: campaignSchema.optional(),
     media: z

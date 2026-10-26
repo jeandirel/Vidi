@@ -92,3 +92,19 @@ test('empty projects cannot be saved as production-ready projects', () => {
     projectSchema.safeParse({ ...base, script: { hook: '', body: '', cta: '' } }).success,
   ).toBe(false);
 });
+test.each(['tiktok-punchy', 'boxed-minimal', 'gradient-pop', 'classic-white'] as const)(
+  'validates subtitleStyle preset %s',
+  (style) => {
+    const parsed = projectSchema.safeParse({ ...base, subtitleStyle: style });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.subtitleStyle).toBe(style);
+    }
+  },
+);
+test('rejects invalid subtitleStyle', () => {
+  expect(
+    projectSchema.safeParse({ ...base, subtitleStyle: 'invalid-style' as any }).success,
+  ).toBe(false);
+});
+
