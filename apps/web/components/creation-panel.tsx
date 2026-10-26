@@ -1233,6 +1233,29 @@ export default function CreationPanel({
               }
             />
           ) : null}
+          <div className="aspect-ratio-section">
+            <span className="field-title">Format vidéo & Réseaux sociaux</span>
+            <div className="aspect-ratio-selector-row">
+              {(
+                [
+                  { id: '9:16', label: '9:16 Vertical', desc: 'TikTok · Reels · Shorts' },
+                  { id: '1:1', label: '1:1 Carré', desc: 'Instagram · Facebook Feed' },
+                  { id: '16:9', label: '16:9 Paysage', desc: 'YouTube · Web Ads' },
+                ] as const
+              ).map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  className={`aspect-pill ${(p.aspectRatio || '9:16') === r.id ? 'active' : ''}`}
+                  onClick={() => update({ ...p, aspectRatio: r.id })}
+                >
+                  <span className="aspect-ratio-tag">{r.id}</span>
+                  <strong>{r.label}</strong>
+                  <small>{r.desc}</small>
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="export-settings">
             <label className="field">
               Résolution

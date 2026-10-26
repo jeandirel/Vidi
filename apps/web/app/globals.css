@@ -1040,6 +1040,23 @@ h1 {
     0 0 60px -5px rgba(168, 85, 247, 0.55),
     inset 0 0 0 1px rgba(0, 0, 0, 0.8);
 }
+.phone-preview.ratio-9-16 {
+  aspect-ratio: 9/16;
+  max-width: 340px;
+  margin: 0 auto;
+}
+.phone-preview.ratio-1-1 {
+  aspect-ratio: 1/1;
+  max-width: 380px;
+  border-radius: 20px;
+  margin: 0 auto;
+}
+.phone-preview.ratio-16-9 {
+  aspect-ratio: 16/9;
+  max-width: 480px;
+  border-radius: 16px;
+  margin: 0 auto;
+}
 .preview-person {
   position: absolute;
   width: 100%;
@@ -7316,6 +7333,78 @@ h1 {
   .pill-top-right,
   .pill-bottom-left {
     display: none;
+  }
+}
+
+/* Aspect Ratio Selector */
+.aspect-ratio-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+.aspect-ratio-section .field-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-foreground-secondary, #94a3b8);
+  letter-spacing: 0.01em;
+}
+.aspect-ratio-selector-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.aspect-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: left;
+}
+.aspect-pill:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-1px);
+}
+.aspect-pill.active {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.18), rgba(236, 72, 153, 0.12));
+  border-color: rgba(168, 85, 247, 0.6);
+  box-shadow: 0 0 16px -3px rgba(168, 85, 247, 0.35);
+}
+.aspect-pill .aspect-ratio-tag {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+}
+.aspect-pill.active .aspect-ratio-tag {
+  background: rgba(168, 85, 247, 0.3);
+  color: #e9d5ff;
+}
+.aspect-pill strong {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #fff;
+}
+.aspect-pill small {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  line-height: 1.2;
+}
+
+@media (max-width: 640px) {
+  .aspect-ratio-selector-row {
+    grid-template-columns: 1fr;
   }
 }
 

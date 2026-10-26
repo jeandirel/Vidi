@@ -78,13 +78,13 @@ export default function Preview({
           <Icon name="video" size={16} />
           Aperçu de composition
         </span>
-        <span className="preview-ratio">9:16 FHD</span>
+        <span className="preview-ratio">{p.aspectRatio || '9:16'} · {p.resolution}</span>
       </div>
       <div className="preview-stage">
         <div
-          className={`phone-preview ${playing ? 'is-playing' : ''} ${
-            isProductBRollActive ? 'broll-active' : ''
-          }`}
+          className={`phone-preview ratio-${(p.aspectRatio || '9:16').replace(':', '-')} ${
+            playing ? 'is-playing' : ''
+          } ${isProductBRollActive ? 'broll-active' : ''}`}
         >
           {/* Avatar Person / Face Cam */}
           <img
@@ -182,8 +182,8 @@ export default function Preview({
 
       <div className="render-summary">
         <div>
-          <span>Format</span>
-          <strong>MP4 · {p.resolution}</strong>
+          <span>Format & Ratio</span>
+          <strong>MP4 · {p.aspectRatio || '9:16'} · {p.resolution}</strong>
         </div>
         <div>
           <span>Coût estimé</span>

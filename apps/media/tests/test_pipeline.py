@@ -27,10 +27,26 @@ class PipelineTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             target = Path(folder)/'captions.srt'
             subtitles({'hook':'<font>test</font>', 'body':r'{\an9}body', 'cta':'Next'},15,target)
-            text = target.read_text()
+            text = target.read_text(encoding='utf-8')
             self.assertNotIn('<font>',text)
             self.assertNotIn(r'{\an9}',text)
             self.assertIn('00:00:15,000', text)
+    def test_real_ffmpeg_renders_square_1_1_format(self):
+        with tempfile.TemporaryDirectory() as folder:
+            project = {'duration':6, 'resolution':'720p', 'aspectRatio':'1:1', 'subtitleStyle':'boxed-minimal', 'language':'fr', 'emotion':'warm', 'voiceId':'claire', 'avatarId':'lea', 'captions':True, 'product':{'image':''}, 'script':{'hook':'Square 1:1','body':'Testing square video','cta':'Done'}, 'media':{'kind':'product','narration':'none'}}
+            output = compose(project, Path(folder))
+            info = json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-show_format','-of','json',str(output)]))
+            self.assertEqual(info['streams'][0]['width'], 720)
+            self.assertEqual(info['streams'][0]['height'], 720)
+            self.assertAlmostEqual(float(info['format']['duration']), 6, places=1)
+    def test_real_ffmpeg_renders_landscape_16_9_format(self):
+        with tempfile.TemporaryDirectory() as folder:
+            project = {'duration':6, 'resolution':'720p', 'aspectRatio':'16:9', 'subtitleStyle':'gradient-pop', 'language':'fr', 'emotion':'warm', 'voiceId':'claire', 'avatarId':'lea', 'captions':True, 'product':{'image':''}, 'script':{'hook':'Landscape 16:9','body':'Testing landscape video','cta':'Done'}, 'media':{'kind':'product','narration':'none'}}
+            output = compose(project, Path(folder))
+            info = json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-show_format','-of','json',str(output)]))
+            self.assertEqual(info['streams'][0]['width'], 1280)
+            self.assertEqual(info['streams'][0]['height'], 720)
+            self.assertAlmostEqual(float(info['format']['duration']), 6, places=1)
     def test_clone_never_falls_back_to_a_standard_voice(self):
         with tempfile.TemporaryDirectory() as folder:
             project = {'duration':15, 'resolution':'720p','language':'fr','emotion':'warm','voiceId':'claire','avatarId':'lea','captions':False,'product':{'image':''},'script':{'hook':'Hi','body':'Text','cta':'Go'},'media':{'kind':'product','narration':'clone'}}

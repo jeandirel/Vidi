@@ -36,6 +36,7 @@ export const emptyProject: ProjectInput = {
   emotion: 'warm',
   duration: 15,
   resolution: '720p',
+  aspectRatio: '9:16',
   captions: true,
   subtitleStyle: 'tiktok-punchy',
   clips: [

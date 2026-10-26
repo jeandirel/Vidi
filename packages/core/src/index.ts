@@ -69,6 +69,7 @@ export const projectSchema = z
       z.literal(90),
     ]),
     resolution: z.enum(['720p', '1080p', '4k']),
+    aspectRatio: z.enum(['9:16', '1:1', '16:9']).default('9:16'),
     captions: z.boolean(),
     subtitleStyle: z
       .enum(['tiktok-punchy', 'boxed-minimal', 'gradient-pop', 'classic-white'])

@@ -42,17 +42,25 @@ class Product(BaseModel):
 class Media(BaseModel):
     kind: Literal['product','avatar'] = 'product'
     narration: Literal['none','standard','clone'] = 'none'
-    voiceProfileId: str | None = Field(default=None, max_length=100)
+class Clip(BaseModel):
+    id: str = Field(max_length=100)
+    label: str = Field(default='', max_length=80)
+    kind: Literal['avatar', 'product', 'caption', 'audio']
+    start: float = Field(ge=0, le=120)
+    duration: float = Field(gt=0, le=120)
 class Project(BaseModel):
     script: Script
     product: Product
-    duration: Literal[15,30,60]
-    resolution: Literal['720p','1080p','4k']
-    language: Literal['fr','en','es','de','pt']
-    emotion: Literal['warm','energetic','calm']
-    avatarId: Literal['lea','marcus','maya','alex','ines','kenji']
-    voiceId: Literal['claire','noah','amina','james']
+    duration: Literal[6, 15, 30, 45, 60, 90]
+    resolution: Literal['720p', '1080p', '4k']
+    aspectRatio: Literal['9:16', '1:1', '16:9'] = '9:16'
+    language: Literal['fr', 'en', 'es', 'de', 'pt']
+    emotion: Literal['warm', 'energetic', 'calm']
+    avatarId: Literal['lea', 'marcus', 'maya', 'alex', 'ines', 'kenji']
+    voiceId: Literal['claire', 'noah', 'amina', 'james']
     captions: bool
+    subtitleStyle: Literal['tiktok-punchy', 'boxed-minimal', 'gradient-pop', 'classic-white'] = 'tiktok-punchy'
+    clips: list[Clip] = Field(default_factory=list)
     media: Media = Field(default_factory=Media)
 class Job(BaseModel):
     model_config = ConfigDict(extra='forbid')

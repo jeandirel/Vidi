@@ -102,9 +102,22 @@ test.each(['tiktok-punchy', 'boxed-minimal', 'gradient-pop', 'classic-white'] as
     }
   },
 );
-test('rejects invalid subtitleStyle', () => {
+test.each(['9:16', '1:1', '16:9'] as const)('validates aspectRatio preset %s', (ratio) => {
+  const parsed = projectSchema.safeParse({ ...base, aspectRatio: ratio });
+  expect(parsed.success).toBe(true);
+  if (parsed.success) {
+    expect(parsed.data.aspectRatio).toBe(ratio);
+  }
+});
+test('defaults aspectRatio to 9:16 if omitted', () => {
+  const parsed = projectSchema.safeParse(base);
+  expect(parsed.success).toBe(true);
+  if (parsed.success) {
+    expect(parsed.data.aspectRatio).toBe('9:16');
+  }
+});
+test('rejects invalid aspectRatio', () => {
   expect(
-    projectSchema.safeParse({ ...base, subtitleStyle: 'invalid-style' as unknown as 'tiktok-punchy' }).success,
+    projectSchema.safeParse({ ...base, aspectRatio: '4:3' as unknown as '9:16' }).success,
   ).toBe(false);
 });
-

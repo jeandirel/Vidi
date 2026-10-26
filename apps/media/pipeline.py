@@ -111,6 +111,31 @@ def animate(avatar_id, audio, work):
         raise RuntimeError('avatar_output_invalid')
     return files[0]
 
+RESOLUTIONS = {
+    '9:16': {'720p': (720, 1280), '1080p': (1080, 1920), '4k': (2160, 3840)},
+    '1:1': {'720p': (720, 720), '1080p': (1080, 1080), '4k': (2160, 2160)},
+    '16:9': {'720p': (1280, 720), '1080p': (1920, 1080), '4k': (3840, 2160)},
+}
+
+SUBTITLE_STYLES = {
+    'tiktok-punchy': (
+        "FontName=DejaVu Sans,FontSize=24,Bold=1,"
+        "PrimaryColour=&H0047E0FD,OutlineColour=&H00000000,BorderStyle=1,Outline=3,MarginV=65,Alignment=2"
+    ),
+    'boxed-minimal': (
+        "FontName=DejaVu Sans,FontSize=18,Bold=0,"
+        "PrimaryColour=&H00FFFFFF,OutlineColour=&H990F1118,BorderStyle=3,Outline=2,MarginV=70,Alignment=2"
+    ),
+    'gradient-pop': (
+        "FontName=DejaVu Sans,FontSize=22,Bold=1,"
+        "PrimaryColour=&H00F8BD38,OutlineColour=&H00C084FC,BorderStyle=1,Outline=3,MarginV=65,Alignment=2"
+    ),
+    'classic-white': (
+        "FontName=DejaVu Sans,FontSize=20,Bold=0,"
+        "PrimaryColour=&H00FFFFFF,OutlineColour=&H00101010,BorderStyle=1,Outline=2,MarginV=70,Alignment=2"
+    ),
+}
+
 def compose(project, work, reference=None):
     duration = project['duration']
     media = project.get('media') or {'kind': 'product', 'narration': 'none'}
@@ -123,34 +148,86 @@ def compose(project, work, reference=None):
                    reference=reference, voice_id=project['voiceId'])
         if seconds(audio) > duration + .2:
             raise ValueError('script_audio_exceeds_duration')
-    width, height = {'720p': (720,1280), '1080p': (1080,1920), '4k': (2160,3840)}[project['resolution']]
+
+    aspect = project.get('aspectRatio', '9:16')
+    if aspect not in RESOLUTIONS:
+        aspect = '9:16'
+    width, height = RESOLUTIONS[aspect][project['resolution']]
     args = ['ffmpeg', '-y', '-hide_banner', '-loglevel', 'error', '-threads', '2']
+
+    product_img_path = None
+    image = project.get('product', {}).get('image', '')
+    if image:
+        if len(image) > 1500000 or not re.fullmatch(r'data:image/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+', image):
+            raise ValueError('unsupported_product_image')
+        source = work / 'product-source'
+        source.write_bytes(base64.b64decode(image.split(',', 1)[1], validate=True))
+        with Image.open(source) as opened:
+            product_img_path = work / 'product.jpg'
+            opened.convert('RGB').save(product_img_path)
+
+    product_clips = [
+        c for c in project.get('clips', [])
+        if isinstance(c, dict) and c.get('kind') == 'product' and c.get('duration', 0) > 0
+    ]
+    has_broll_overlay = media['kind'] == 'avatar' and product_clips and product_img_path is not None
+
     if media['kind'] == 'avatar':
         if audio is None: raise ValueError('avatar_requires_audio')
         video = animate(project['avatarId'], audio, work)
         args += ['-i', str(video)]
+        if has_broll_overlay:
+            args += ['-loop', '1', '-i', str(product_img_path)]
     else:
-        image = project['product'].get('image', '')
-        if image:
-            if len(image) > 1500000 or not re.fullmatch(r'data:image/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+', image):
-                raise ValueError('unsupported_product_image')
-            source = work / 'product-source'
-            source.write_bytes(base64.b64decode(image.split(',', 1)[1], validate=True))
-            with Image.open(source) as opened:
-                opened.convert('RGB').save(work / 'product.jpg')
-            args += ['-loop', '1', '-i', str(work / 'product.jpg')]
+        if product_img_path:
+            args += ['-loop', '1', '-i', str(product_img_path)]
         else:
             args += ['-f', 'lavfi', '-i', f'color=c=0x17181c:s={width}x{height}:r=25']
+
     if audio: args += ['-i', str(audio)]
-    filters = f'scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,setsar=1'
-    if media['kind'] == 'avatar':
-        filters += f',tpad=stop_mode=clone:stop_duration={duration}'
-    if project['captions']:
-        subtitles(project['script'], duration, work / 'captions.srt')
-        filters += ",subtitles=captions.srt:force_style='FontName=DejaVu Sans,FontSize=22,PrimaryColour=&H00FFFFFF,OutlineColour=&H00101010,BorderStyle=1,Outline=2,MarginV=70,Alignment=2'"
+
+    subtitle_style_key = project.get('subtitleStyle', 'tiktok-punchy')
+    sub_style = SUBTITLE_STYLES.get(subtitle_style_key, SUBTITLE_STYLES['tiktok-punchy'])
     destination = work / 'output.mp4'
-    args += ['-map', '0:v:0', '-vf', filters, '-t', str(duration), '-r', '25', '-c:v', 'libx264', '-preset', 'fast', '-crf', '23', '-pix_fmt', 'yuv420p', '-threads', '2']
-    args += ['-map', '1:a:0', '-c:a', 'aac'] if audio else ['-an']
+
+    if has_broll_overlay:
+        between_expr = '+'.join([
+            f"between(t,{c['start']:.2f},{(c['start']+c['duration']):.2f})"
+            for c in product_clips
+        ])
+        prod_w = int(width * 0.85)
+        prod_h = int(height * 0.85)
+        prod_w = prod_w if prod_w % 2 == 0 else prod_w - 1
+        prod_h = prod_h if prod_h % 2 == 0 else prod_h - 1
+        
+        fc = (
+            f"[0:v]scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,setsar=1,tpad=stop_mode=clone:stop_duration={duration}[avatar];"
+            f"[1:v]scale={prod_w}:{prod_h}:force_original_aspect_ratio=decrease,setsar=1[prod];"
+            f"[avatar][prod]overlay=(W-w)/2:(H-h)/2:enable='{between_expr}'[vover]"
+        )
+        if project.get('captions'):
+            subtitles(project['script'], duration, work / 'captions.srt')
+            fc += f";[vover]subtitles=captions.srt:force_style='{sub_style}'[vout]"
+        else:
+            fc += f";[vover]null[vout]"
+
+        args += [
+            '-filter_complex', fc,
+            '-map', '[vout]',
+            '-t', str(duration), '-r', '25', '-c:v', 'libx264', '-preset', 'fast', '-crf', '23',
+            '-pix_fmt', 'yuv420p', '-threads', '2'
+        ]
+        args += ['-map', '2:a:0', '-c:a', 'aac'] if audio else ['-an']
+    else:
+        filters = f'scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,setsar=1'
+        if media['kind'] == 'avatar':
+            filters += f',tpad=stop_mode=clone:stop_duration={duration}'
+        if project.get('captions'):
+            subtitles(project['script'], duration, work / 'captions.srt')
+            filters += f",subtitles=captions.srt:force_style='{sub_style}'"
+        args += ['-map', '0:v:0', '-vf', filters, '-t', str(duration), '-r', '25', '-c:v', 'libx264', '-preset', 'fast', '-crf', '23', '-pix_fmt', 'yuv420p', '-threads', '2']
+        args += ['-map', '1:a:0', '-c:a', 'aac'] if audio else ['-an']
+
     args += ['-movflags', '+faststart', str(destination)]
     run(args, cwd=work, timeout=1200)
     return destination
