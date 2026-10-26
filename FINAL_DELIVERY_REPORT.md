@@ -77,7 +77,22 @@ Conformément à la règle de transparence absolue, les éléments suivants sont
 
 ---
 
-## 6. État du Moteur Média et des Workers
+## 6. Authentification Google OAuth 2.0 Exclusive (Chantier 2 Livré)
+
+- **Protocole PKCE & Sécurité OpenID Connect :**
+  - Route d'initiation `/api/auth/google` avec génération de challenge cryptographique S256 et vérification du paramètre `state` anti-CSRF dans un cookie HTTP-only `vidi_google_oauth`.
+  - Route de rappel `/api/auth/google/callback` avec échange de jetons, récupération du profil Google vérifié (`email`, `name`, `picture`), et création transparente de session utilisateur `vidi_session`.
+- **Intégration UI & Boutons Officiels :**
+  - Composant réactif `<GoogleSignInButton />` avec logo officiel Google en quadrichromie SVG, animations de hover et indicateur de chargement.
+  - Intégré sur `/login` (« Continuer avec Google »), sur `/register` (« S’inscrire avec Google »), et dans la modale de studio `AccountDialog`.
+  - Séparateur visuel élégant `OU PAR EMAIL`.
+- **Tests & Documentation :**
+  - Suite de tests unitaires dédiée `tests/unit/google-auth.test.ts` (102 tests réussis sur l'ensemble du monorepo).
+  - Variables documentées dans `.env.example`, `.env.vercel.example` et guide pas-à-pas dans `docs/VERCEL_ENV_SETUP.md`.
+
+---
+
+## 7. État du Moteur Média et des Workers
 
 - **Worker BullMQ (`apps/worker`) :** Configuré pour écouter la file Redis `render` et orchestrer les jobs de transcodage de manière asynchrone et résiliente.
 - **Service Média Python (`apps/media`) :** Contrat HTTP documenté dans `docs/video-gateway.md` et `apps/media/README.md`.
@@ -85,7 +100,7 @@ Conformément à la règle de transparence absolue, les éléments suivants sont
 
 ---
 
-## 7. Variables d'Environnement Documentées
+## 8. Variables d'Environnement Documentées
 
 Les fichiers suivants ont été créés et audités pour votre configuration :
 - `.env.vercel.example` (Gabarit sans secrets prêt pour l'interface Vercel)
@@ -93,10 +108,12 @@ Les fichiers suivants ont été créés et audités pour votre configuration :
 
 ---
 
-## 8. Commits et Historique de Livraison
+## 9. Commits et Historique de Livraison
 
 - Commit `5f8626a` : *feat(marketing): world-class landing page, decoupled studio, public routes and multi-duration scriptwriting* (Pushed to `origin/main`).
 - Commit `2fb34ad` : *feat(studio): advanced multi-track video timeline editor with playhead needle, split clip, undo-redo and subtitle styles* (Pushed to `origin/main`).
+- Commit `72025ad` : *docs: document multi-track timeline editor delivery in FINAL_DELIVERY_REPORT.md* (Pushed to `origin/main`).
 
 Dépôt GitHub synchronisé : [https://github.com/jeandirel/Vidi](https://github.com/jeandirel/Vidi).
+
 

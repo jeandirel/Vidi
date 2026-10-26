@@ -92,3 +92,34 @@ L'application a été conçue pour échouer de manière explicite et informative
 - **Absence de passerelle vidéo** : Le bouton de rendu informe que le moteur média est en attente d'activation serveur, sans jamais prétendre faussement qu'une vidéo a été générée.
 - **Absence de Stripe** : Les pages de checkout restent désactivées de manière élégante et indiquent le mode démonstration.
 - **Absence de passerelle LLM** : L'essai interactif bascule automatiquement sur un générateur heuristique calibré AIDA/PAS sans blocage de l'interface utilisateur.
+
+---
+
+## 7. Configuration de l'Authentification Google OAuth 2.0 (Google Sign-In)
+
+1. Rendez-vous sur la [Google Cloud Console](https://console.cloud.google.com/).
+2. Créez ou sélectionnez votre projet Google Cloud.
+3. Accédez à **APIs & Services > OAuth consent screen (Écran de consentement OAuth)** :
+   - Choisissez le type **Externe**.
+   - Renseignez le nom de l'application : `Vidi`.
+   - Email de contact développeur et support utilisateur.
+   - Ajoutez les champs obligatoires dans les scopes : `openid`, `email`, `profile`.
+4. Accédez à **APIs & Services > Credentials (Identifiants)** :
+   - Cliquez sur **Create Credentials > OAuth client ID (ID client OAuth)**.
+   - Type d'application : **Web application (Application Web)**.
+   - Nom : `Vidi Web Client`.
+   - **Authorized JavaScript origins (Origines JavaScript autorisées)** :
+     - `http://localhost:3000` (développement local)
+     - `https://votre-projet.vercel.app` (production)
+   - **Authorized redirect URIs (URI de redirection autorisées)** :
+     - `http://localhost:3000/api/auth/google/callback`
+     - `https://votre-projet.vercel.app/api/auth/google/callback`
+5. Récupérez le **Client ID** et le **Client Secret**.
+6. Dans Vercel (ou dans votre `.env` local) :
+   ```env
+   GOOGLE_CLIENT_ID=xxxxxxxxxxxx.apps.googleusercontent.com
+   GOOGLE_CLIENT_SECRET=GOCSPX-xxxxxxxxxxxxxxxx
+   GOOGLE_REDIRECT_URI=https://votre-projet.vercel.app/api/auth/google/callback
+   ```
+7. Redéployez : Le bouton « Continuer avec Google » authentifiera directement les utilisateurs avec création automatique de session et de leur espace workspace dans PostgreSQL.
+

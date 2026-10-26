@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import Icon from './icon';
+import GoogleSignInButton from './google-sign-in-button';
 export default function AccountDialog({
   onClose,
   onConnected,
@@ -60,6 +61,20 @@ export default function AccountDialog({
           </p>
         </div>
       ) : null}
+
+      <div style={{ marginTop: '16px' }}>
+        <GoogleSignInButton
+          text={mode === 'login' ? 'Continuer avec Google' : 'S’inscrire avec Google'}
+          returnTo="/app"
+        />
+      </div>
+
+      <div className="auth-divider" style={{ margin: '14px 0' }}>
+        <span />
+        <em>ou avec vos identifiants</em>
+        <span />
+      </div>
+
       <form onSubmit={submit}>
         {mode === 'register' ? (
           <label className="field">

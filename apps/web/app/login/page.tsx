@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Icon from '@/components/icon';
+import GoogleSignInButton from '@/components/google-sign-in-button';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -11,6 +12,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const oauthError = params.get('oauth_error');
+    if (oauthError) {
+      setError(oauthError);
+    }
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -64,8 +73,19 @@ export default function LoginPage() {
         </div>
 
         {/* Login form */}
-        <form onSubmit={handleSubmit} className="auth-form-card">
+        <div className="auth-form-card">
           {error && <div className="form-error-banner">{error}</div>}
+
+          {/* Dedicated Google Authentication */}
+          <GoogleSignInButton text="Continuer avec Google" />
+
+          <div className="auth-divider">
+            <span />
+            <em>ou par email</em>
+            <span />
+          </div>
+
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
 
           <div className="field-group">
             <label htmlFor="login-email">Adresse email</label>
@@ -117,6 +137,7 @@ export default function LoginPage() {
             )}
           </button>
         </form>
+        </div>
 
         {/* Footer links */}
         <div className="auth-footer-links">

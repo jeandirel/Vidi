@@ -5,6 +5,7 @@ import { mediaConfigured, mediaCapabilities, videoConfigured } from '@/lib/media
 import { storageConfigured } from '@/lib/storage';
 import { billingConfigured } from '@/lib/billing';
 import { llmConfigured, guestScriptsEnabled } from '@/lib/llm';
+import { isGoogleAuthAvailable } from '@/lib/google-auth';
 export async function GET(request: Request) {
   try {
     const workspaceId = new URL(request.url).searchParams.get('workspaceId');
@@ -19,6 +20,7 @@ export async function GET(request: Request) {
     return Response.json(
       {
         database: !!process.env.DATABASE_URL,
+        googleAuth: isGoogleAuthAvailable(),
         scripts: llmConfigured(),
         guestScripts: guestScriptsEnabled(),
         video: mediaConfigured() ? !!(engines?.product || engines?.avatar) : videoConfigured(),

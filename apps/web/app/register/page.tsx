@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Icon from '@/components/icon';
+import GoogleSignInButton from '@/components/google-sign-in-button';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -12,6 +13,14 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const oauthError = params.get('oauth_error');
+    if (oauthError) {
+      setError(oauthError);
+    }
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -71,8 +80,19 @@ export default function RegisterPage() {
         </div>
 
         {/* Register form */}
-        <form onSubmit={handleSubmit} className="auth-form-card">
+        <div className="auth-form-card">
           {error && <div className="form-error-banner">{error}</div>}
+
+          {/* Dedicated Google Authentication */}
+          <GoogleSignInButton text="S’inscrire avec Google" />
+
+          <div className="auth-divider">
+            <span />
+            <em>ou par email</em>
+            <span />
+          </div>
+
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
 
           <div className="field-group">
             <label htmlFor="reg-name">Nom complet ou nom d'équipe</label>
@@ -140,6 +160,7 @@ export default function RegisterPage() {
             )}
           </button>
         </form>
+        </div>
 
         {/* Footer links */}
         <div className="auth-footer-links">

@@ -104,7 +104,7 @@ test.each(['tiktok-punchy', 'boxed-minimal', 'gradient-pop', 'classic-white'] as
 );
 test('rejects invalid subtitleStyle', () => {
   expect(
-    projectSchema.safeParse({ ...base, subtitleStyle: 'invalid-style' as any }).success,
+    projectSchema.safeParse({ ...base, subtitleStyle: 'invalid-style' as unknown as 'tiktok-punchy' }).success,
   ).toBe(false);
 });
 
