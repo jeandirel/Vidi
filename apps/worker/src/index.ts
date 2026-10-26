@@ -4,17 +4,20 @@ import { db } from '@vidi/db';
 import { projectSchema, signableWebhook } from '@vidi/core';
 import { executeMedia, lockVoiceConsent } from './media';
 import { createVoiceWorker } from './voices';
+import { generateHeyGenVideo } from './providers/heygen';
 
 const required = ['DATABASE_URL', 'REDIS_URL'] as const;
 for (const key of required) if (!process.env[key]) throw new Error(`Missing configuration: ${key}`);
+const heygen = !!process.env.HEYGEN_API_KEY;
 const native = !!(process.env.MEDIA_GATEWAY_URL && process.env.MEDIA_GATEWAY_TOKEN);
 if (
+  !heygen &&
   !native &&
   (!process.env.VIDEO_GATEWAY_URL ||
     !process.env.VIDEO_GATEWAY_TOKEN ||
     !process.env.VIDEO_OUTPUT_HOSTS)
 )
-  throw new Error('Configure a native media gateway or a legacy video gateway.');
+  throw new Error('Configure HeyGen, a native media gateway or a legacy video gateway.');
 const redis = new URL(process.env.REDIS_URL!);
 const connection = {
   host: redis.hostname,
@@ -25,7 +28,11 @@ const connection = {
   tls: redis.protocol === 'rediss:' ? {} : undefined,
   maxRetriesPerRequest: null,
 };
-const gateway = new URL(native ? process.env.MEDIA_GATEWAY_URL! : process.env.VIDEO_GATEWAY_URL!);
+const gateway = new URL(
+  native
+    ? process.env.MEDIA_GATEWAY_URL!
+    : (process.env.VIDEO_GATEWAY_URL || 'https://api.heygen.com'),
+);
 if (gateway.protocol !== 'https:') throw new Error('VIDEO_GATEWAY_URL must use HTTPS.');
 const queue = new Queue('vidi-renders', { connection });
 const notifications = new Queue('vidi-webhooks', { connection });
@@ -33,10 +40,16 @@ const voices = new Queue('vidi-voices', { connection });
 voices.on('error', () => console.error('Voice dispatcher unavailable'));
 queue.on('error', () => console.error('Render dispatcher connection error'));
 notifications.on('error', () => console.error('Webhook queue connection error'));
-const allowedHosts = (process.env.VIDEO_OUTPUT_HOSTS || '')
-  .split(',')
-  .map((s) => s.trim())
-  .filter(Boolean);
+const allowedHosts = [
+  'resource2.heygen.ai',
+  'resource.heygen.ai',
+  'files.heygen.ai',
+  'heygen.ai',
+  ...(process.env.VIDEO_OUTPUT_HOSTS || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean),
+];
 async function enqueueNotification(renderId: string) {
   if (process.env.WEBHOOK_URL && process.env.WEBHOOK_SECRET)
     await notifications.add(
@@ -84,7 +97,17 @@ const worker = new Worker<{ renderId: string }>(
     try {
       const input = projectSchema.parse(render.input);
       await db.render.update({ where: { id: render.id }, data: { status: 'PROCESSING' } });
-      if (native) {
+      if (heygen) {
+        const result = await generateHeyGenVideo({
+          project: input,
+          apiKey: process.env.HEYGEN_API_KEY!,
+        });
+        const output = new URL(result.videoUrl);
+        await db.render.update({
+          where: { id: render.id },
+          data: { status: 'COMPLETED', outputUrl: output.href, error: null },
+        });
+      } else if (native) {
         const output = await executeMedia(render.id, render.workspaceId, { project: input });
         await db.$transaction(async (tx) => {
           await lockVoiceConsent(

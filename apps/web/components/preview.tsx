@@ -208,7 +208,7 @@ export default function Preview({
 
       <div className={`engine-status ${videoConnected ? 'connected' : ''}`}>
         <span />
-        {videoConnected ? 'Moteur configuré' : 'Moteur vidéo à connecter'}
+        {videoConnected ? 'Moteur HeyGen Connecté' : 'Moteur vidéo HeyGen à connecter'}
       </div>
     </aside>
   );

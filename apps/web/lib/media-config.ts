@@ -9,6 +9,7 @@ export function mediaConfigured() {
 }
 export function videoConfigured() {
   return (
+    !!process.env.HEYGEN_API_KEY ||
     mediaConfigured() ||
     !!(
       process.env.VIDEO_GATEWAY_URL &&
