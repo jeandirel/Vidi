@@ -92,19 +92,34 @@ Conformément à la règle de transparence absolue, les éléments suivants sont
 
 ---
 
-## 7. État du Moteur Média et des Workers
+## 7. Moteur de Rendu FFmpeg Multi-pistes & Multi-Format (Chantier 3 & 5 Livrés)
 
-- **Worker BullMQ (`apps/worker`) :** Configuré pour écouter la file Redis `render` et orchestrer les jobs de transcodage de manière asynchrone et résiliente.
-- **Service Média Python (`apps/media`) :** Contrat HTTP documenté dans `docs/video-gateway.md` et `apps/media/README.md`.
-- **Politique de Déploiement :** Le conteneur média doit rester sur son hébergement dédié (VPS Docker) et ne doit pas être migré sur Vercel Serverless.
+- **Calcul dynamique des résolutions multi-formats :**
+  - `9:16` (Vertical TikTok / Reels / Shorts) : 720x1280 (720p), 1080x1920 (1080p), 2160x3840 (4K).
+  - `1:1` (Carré Instagram / Facebook Feed) : 720x720 (720p), 1080x1080 (1080p), 2160x2160 (4K).
+  - `16:9` (Paysage YouTube Ads / Web Display) : 1280x720 (720p), 1920x1080 (1080p), 3840x2160 (4K).
+- **Incrustation dynamique des plans B-roll Produit :**
+  - Détection automatique des segments de type `product` dans la timeline.
+  - Décodage sécurisé de l'image produit et composition via filtergraph FFmpeg :
+    `[avatar][prod]overlay=(W-w)/2:(H-h)/2:enable='between(t,start,end)'`
+  - Incrustation synchronisée des visuels produit par-dessus l'avatar pendant les créneaux temporels définis.
+- **Gravure des sous-titres avec styles prédéfinis :**
+  - Application des styles ASS/SRT selon le preset choisi : `tiktok-punchy` (jaune néon contrasté), `boxed-minimal` (fond sombre dépoli), `gradient-pop` (violet/cyan), `classic-white`.
+- **Sélecteur de format réactif dans le Studio :**
+  - Pilules interactives `9:16 Vertical`, `1:1 Carré`, `16:9 Paysage` dans l'onglet de montage.
+  - Prévisualisation live adaptative redimensionnant dynamiquement le viewport du smartphone / lecteur vidéo (`ratio-9-16`, `ratio-1-1`, `ratio-16-9`).
+- **Tests unitaires FFmpeg Python :**
+  - 9 tests réels réussis dans `apps/media/tests/test_pipeline.py` et `test_server.py` validant les flux MP4 réels en 9:16, 1:1 et 16:9 avec ffprobe.
 
 ---
 
-## 8. Variables d'Environnement Documentées
+## 8. Résultats des Tests et Conformité Globale
 
-Les fichiers suivants ont été créés et audités pour votre configuration :
-- `.env.vercel.example` (Gabarit sans secrets prêt pour l'interface Vercel)
-- `docs/VERCEL_ENV_SETUP.md` (Guide d'activation étape par étape pour chaque tiers)
+- **Suite TypeScript (`npm test`) :** 9 suites, **106 tests réussis sur 106** (100% passants).
+- **Suite Python FFmpeg (`python -m unittest`) :** **9 tests réussis sur 9** (100% passants).
+- **Vérification des Types (`npm run typecheck`) :** 0 erreur sur l'ensemble du monorepo.
+- **Audit Lint (`npm run lint`) :** 0 erreur, 0 avertissement.
+- **Build de Production (`npm run build`) :** 40 routes compilées avec succès.
 
 ---
 
@@ -113,6 +128,8 @@ Les fichiers suivants ont été créés et audités pour votre configuration :
 - Commit `5f8626a` : *feat(marketing): world-class landing page, decoupled studio, public routes and multi-duration scriptwriting* (Pushed to `origin/main`).
 - Commit `2fb34ad` : *feat(studio): advanced multi-track video timeline editor with playhead needle, split clip, undo-redo and subtitle styles* (Pushed to `origin/main`).
 - Commit `72025ad` : *docs: document multi-track timeline editor delivery in FINAL_DELIVERY_REPORT.md* (Pushed to `origin/main`).
+- Commit `bc1f601` : *feat(auth): dedicated Google OAuth 2.0 PKCE authentication, single-provider sign-in and documentation* (Pushed to `origin/main`).
+- Commit `e2f4260` : *feat(media): implement multi-format export, subtitle styles & multi-track B-roll overlays* (Pushed to `origin/main`).
 
 Dépôt GitHub synchronisé : [https://github.com/jeandirel/Vidi](https://github.com/jeandirel/Vidi).
 
