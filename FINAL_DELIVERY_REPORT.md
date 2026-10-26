@@ -60,7 +60,24 @@ Conformément à la règle de transparence absolue, les éléments suivants sont
 
 ---
 
-## 5. État du Moteur Média et des Workers
+---
+
+## 5. Éditeur Vidéo Multi-pistes & Montage Professionnel (Chantier 1 Livré)
+
+- **Tête de lecture dynamique (Playhead needle) :** Aiguille verticale animée avec indicateur d'horodatage milliseconde (`00:03.5`), synchronisée en temps réel (boucle 100ms) entre la timeline et la prévisualisation smartphone OLED.
+- **Scission de clips (Split at playhead) :** Bouton `Scinder au curseur` permettant de découper instantanément n'importe quel segment audio, avatar ou B-roll à la position exacte de la tête de lecture.
+- **Historique Annuler / Rétablir (Undo / Redo stack) :** Pile de 30 états avec raccourcis clavier natifs (`Ctrl+Z`, `Ctrl+Y`, `Ctrl+Shift+Z`) et boutons interactifs dans la barre supérieure de montage.
+- **Zoom temporel continu (1x, 1.5x, 2x) :** Règle temporelle redimensionnable avec défilement horizontal fluide pour caler des transitions fines à la frame près.
+- **Modèle Standard UGC (4 pistes) :** Génération instantanée d'une structure vidéo professionnelle harmonisée (Avatar face-caméra, B-roll produit, sous-titres mot-à-mot, musique d'ambiance -18dB).
+- **Styles visuels de sous-titres configurables :**
+  1. *TikTok Punchy* : Jaune néon ultra-contrasté avec contour noir dense, optimisé pour la rétention TikTok / Reels.
+  2. *Boxed Minimal* : Bandeau noir dépoli en verre trempé avec typographie blanche épurée, idéal DTC haut de gamme.
+  3. *Gradient Pop* : Dégradé vibrant cyan à violet néon avec lueur diffuse, tendance Web3 / Creator.
+  4. *Blanc Classique* : Typographie cinématographique blanche centrée avec ombre portée douce.
+
+---
+
+## 6. État du Moteur Média et des Workers
 
 - **Worker BullMQ (`apps/worker`) :** Configuré pour écouter la file Redis `render` et orchestrer les jobs de transcodage de manière asynchrone et résiliente.
 - **Service Média Python (`apps/media`) :** Contrat HTTP documenté dans `docs/video-gateway.md` et `apps/media/README.md`.
@@ -68,7 +85,7 @@ Conformément à la règle de transparence absolue, les éléments suivants sont
 
 ---
 
-## 6. Variables d'Environnement Documentées
+## 7. Variables d'Environnement Documentées
 
 Les fichiers suivants ont été créés et audités pour votre configuration :
 - `.env.vercel.example` (Gabarit sans secrets prêt pour l'interface Vercel)
@@ -76,6 +93,10 @@ Les fichiers suivants ont été créés et audités pour votre configuration :
 
 ---
 
-## 7. Commits et Historique de Livraison
+## 8. Commits et Historique de Livraison
 
-Tous les ajouts et consolidations techniques sont préparés pour le push final sur la branche principale du dépôt GitHub [https://github.com/jeandirel/Vidi](https://github.com/jeandirel/Vidi).
+- Commit `5f8626a` : *feat(marketing): world-class landing page, decoupled studio, public routes and multi-duration scriptwriting* (Pushed to `origin/main`).
+- Commit `2fb34ad` : *feat(studio): advanced multi-track video timeline editor with playhead needle, split clip, undo-redo and subtitle styles* (Pushed to `origin/main`).
+
+Dépôt GitHub synchronisé : [https://github.com/jeandirel/Vidi](https://github.com/jeandirel/Vidi).
+
