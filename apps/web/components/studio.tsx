@@ -947,8 +947,8 @@ export default function Studio() {
                       <div>
                         <strong>
                           {{
-                            QUEUED: 'En attente',
-                            PROCESSING: 'Génération en cours',
+                            QUEUED: 'En attente dans la file',
+                            PROCESSING: 'Génération en cours (HeyGen)...',
                             COMPLETED: 'Vidéo prête',
                             FAILED: 'Échec du rendu',
                           }[r.status] || r.status}
@@ -957,18 +957,20 @@ export default function Studio() {
                           {new Date(r.createdAt).toLocaleString('fr-FR')} · {r.credits} crédit
                           {r.credits > 1 ? 's' : ''}
                         </small>
-                        {r.error ? <p>{r.error}</p> : null}
+                        {r.error ? <p className="error-text">{r.error}</p> : null}
                       </div>
                       {r.outputUrl || r.outputAssetId ? (
-                        <a
-                          className="button secondary compact"
-                          href={r.outputAssetId ? `/api/renders/${r.id}/download` : r.outputUrl!}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <Icon name="download" size={15} />
-                          Ouvrir la vidéo
-                        </a>
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                          <a
+                            className="button primary compact"
+                            href={r.outputAssetId ? `/api/renders/${r.id}/download` : r.outputUrl!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <Icon name="play" size={15} />
+                            Ouvrir la vidéo
+                          </a>
+                        </div>
                       ) : null}
                     </article>
                   ))}

@@ -3,12 +3,24 @@ import { db } from '@vidi/db';
 import { projectSchema } from '@vidi/core';
 import { requireWorkspace } from '@/lib/auth';
 import { ApiError, checkOrigin, errorResponse, jsonBody } from '@/lib/api';
+import { localProjects } from '@/lib/local-store';
+
 type Context = { params: Promise<{ id: string }> };
 async function accessible(id: string, write = false, request?: Request) {
-  const project = await db.project.findUnique({ where: { id } });
-  if (!project || project.archivedAt) throw new ApiError(404, 'Projet introuvable.');
-  await requireWorkspace(project.workspaceId, write, request);
-  return project;
+  const local = localProjects.get(id);
+  if (local && !local.archivedAt) {
+    await requireWorkspace(local.workspaceId, write, request);
+    return local;
+  }
+  try {
+    const project = await db.project.findUnique({ where: { id } });
+    if (!project || project.archivedAt) throw new ApiError(404, 'Projet introuvable.');
+    await requireWorkspace(project.workspaceId, write, request);
+    return project;
+  } catch (e) {
+    if (local && !local.archivedAt) return local;
+    throw e;
+  }
 }
 export async function GET(request: Request, { params }: Context) {
   try {

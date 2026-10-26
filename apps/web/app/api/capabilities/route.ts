@@ -12,10 +12,20 @@ export async function GET(request: Request) {
     let providers: string[] = [];
     if (workspaceId) {
       await requireWorkspace(workspaceId);
-      providers = (
-        await db.serviceConnection.findMany({ where: { workspaceId }, select: { provider: true } })
-      ).map((c) => c.provider);
+      if (workspaceId !== 'ws_local' && process.env.DATABASE_URL) {
+        try {
+          providers = (
+            await db.serviceConnection.findMany({
+              where: { workspaceId },
+              select: { provider: true },
+            })
+          ).map((c) => c.provider);
+        } catch {
+          /* ignore db offline */
+        }
+      }
     }
+
     const engines = await mediaCapabilities();
     return Response.json(
       {

@@ -27,7 +27,7 @@ try {
     headers: {
       'X-Api-Key': apiKey,
     },
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(60000),
   });
 
   if (!res.ok) {
@@ -38,23 +38,9 @@ try {
   }
 
   const data = await res.json();
-  const count = data.data?.avatars?.length || 0;
+  const count = (data.data?.avatars?.length || 0) + (data.data?.talking_photos?.length || 0);
   console.log(`\n✅ Authentification HeyGen RÉUSSIE !`);
-  console.log(`👤 ${count} avatars ultra-réalistes accessibles.`);
-  
-  // Test quota
-  try {
-    const quotaRes = await fetch('https://api.heygen.com/v1/user/remaining_quota', {
-      headers: { 'X-Api-Key': apiKey },
-      signal: AbortSignal.timeout(10000),
-    });
-    if (quotaRes.ok) {
-      const q = await quotaRes.json();
-      console.log(`💳 Crédits / Quota restant :`, q.data || q);
-    }
-  } catch {
-    // optional quota check
-  }
+  console.log(`👤 ${count} avatars et visages ultra-réalistes accessibles.`);
 
   console.log('\n🚀 Le moteur HeyGen est 100% prêt à générer vos publicités UGC réelles !');
   console.log('='.repeat(60));

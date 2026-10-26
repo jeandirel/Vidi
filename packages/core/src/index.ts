@@ -152,3 +152,5 @@ export function scriptSeconds(script: Script) {
 export function signableWebhook(eventId: string, body: string) {
   return `${eventId}.${body}`;
 }
+
+export * from './heygen';
