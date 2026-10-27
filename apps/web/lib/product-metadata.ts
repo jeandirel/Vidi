@@ -66,17 +66,48 @@ export function extractProduct(html: string, finalUrl: string): ImportedProduct 
   function meta(key: string) {
     return $(`meta[property="${key}"], meta[name="${key}"]`).first().attr('content') || '';
   }
-  const name = clean(structured?.name || meta('og:title') || $('title').first().text(), 120);
-  const description = clean(
-    structured?.description || meta('og:description') || meta('description'),
-    4000,
-  );
+  const isAmazon = /(?:^|\.)(?:amazon\.[a-z.]+|amzn\.eu)$/i.test(canonical.hostname);
+  const amazonBullets = isAmazon
+    ? $('#feature-bullets li span.a-list-item')
+        .map((_, el) => $(el).text().trim())
+        .get()
+        .filter((t) => t.length > 10 && !t.includes('Amazon'))
+        .slice(0, 4)
+    : [];
+
+  const candidateTitle =
+    (typeof structured?.name === 'string' ? structured.name : '') ||
+    meta('og:title') ||
+    $('#productTitle').text() ||
+    $('title').first().text();
+  let cleanTitle = candidateTitle;
+  if (isAmazon) {
+    cleanTitle = cleanTitle.replace(/\s*:\s*Amazon\.[a-z.]+(?::.*)?$/i, '').trim();
+  }
+  const name = clean(cleanTitle, 120);
+
+  let rawDesc = typeof structured?.description === 'string' ? structured.description : '';
+  if (!rawDesc && amazonBullets.length > 0) {
+    rawDesc = amazonBullets.join('\n\n');
+  }
+  if (!rawDesc) {
+    rawDesc = meta('og:description') || meta('description') || $('#productDescription').text();
+  }
+  const description = clean(rawDesc, 4000);
   if (name.length < 2)
     throw new ApiError(
       422,
       'Aucune fiche exploitable trouvée. Renseignez les informations manuellement.',
     );
-  let rawImage: unknown = structured?.image || meta('og:image');
+  let rawImage: unknown = structured?.image;
+  if (!rawImage && isAmazon) {
+    rawImage =
+      $('#landingImage').attr('data-old-hires') ||
+      $('#landingImage').attr('src') ||
+      meta('og:image');
+  } else if (!rawImage) {
+    rawImage = meta('og:image');
+  }
   if (Array.isArray(rawImage)) rawImage = rawImage[0];
   if (object(rawImage)) rawImage = rawImage.url || rawImage.contentUrl;
   let image = '';
@@ -95,11 +126,13 @@ export function extractProduct(html: string, finalUrl: string): ImportedProduct 
     url: canonical.href,
     source: structured ? 'structured-data' : 'metadata',
     notes: [
-      'Vérifiez les informations et les droits d’utilisation de l’image avant de les appliquer.',
+      isAmazon
+        ? 'Fiche produit importée directement depuis Amazon.'
+        : 'Vérifiez les informations et les droits d’utilisation de l’image avant de les appliquer.',
       ...(description.length < 10
         ? ['La description est absente ou trop courte : complétez-la dans le studio.']
         : []),
-      ...(!structured
+      ...(!structured && !isAmazon
         ? ['Informations issues des métadonnées de la page : vérifiez qu’il s’agit du bon produit.']
         : []),
     ],

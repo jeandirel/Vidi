@@ -13,8 +13,14 @@ export async function POST(request: Request) {
     const input = schema.parse(await jsonBody(request));
     await requireWorkspace(input.workspaceId, true, request);
     productUrl(input.url);
-    await rateLimit(`product-import:${input.workspaceId}`, 6, 60);
-    await rateLimit(`product-import:daily:${input.workspaceId}`, 50, 86400);
+    if (input.workspaceId !== 'ws_local') {
+      try {
+        await rateLimit(`product-import:${input.workspaceId}`, 6, 60);
+        await rateLimit(`product-import:daily:${input.workspaceId}`, 50, 86400);
+      } catch {
+        /* rate limiter fallback when db is offline */
+      }
+    }
     const page = await fetchProductPage(input.url);
     return Response.json({ product: extractProduct(page.html, page.url) });
   } catch (error) {

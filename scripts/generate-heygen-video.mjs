@@ -11,7 +11,8 @@ if (!apiKey) {
 const text = process.argv[2] || 
   "Arrêtez tout ! Si vous cherchez un sérum visage vraiment efficace et rechargeable, regardez ça. Il pénètre en trois secondes, hydrate en profondeur et ne colle pas. Cliquez sur le lien pour profiter de l'offre spéciale !";
 
-const avatarId = process.argv[3] || 'Daisy-inskirt-20220818'; // HeyGen female avatar
+const avatarId = process.argv[3] || 'Abigail_expressive_2024112501'; // HeyGen Léa avatar
+const voiceId = process.argv[5] || 'b11a7dbb250f483eadad9fb253e7d313'; // French female
 const ratio = process.argv[4] || '9:16';
 
 const dimensions = {
@@ -24,6 +25,7 @@ console.log('='.repeat(65));
 console.log('  VIDI — GÉNÉRATION VIDÉO UGC RÉELLE AVEC AVATAR HEYGEN');
 console.log('='.repeat(65));
 console.log(`👤 Avatar HeyGen : ${avatarId}`);
+console.log(`🗣️ Voix HeyGen : ${voiceId}`);
 console.log(`📐 Format : ${ratio} (${dimensions.width}x${dimensions.height})`);
 console.log(`📝 Script : "${text}"\n`);
 console.log('🚀 Envoi de la demande de génération à l\'API HeyGen v2...');
@@ -40,6 +42,7 @@ try {
         voice: {
           type: 'text',
           input_text: text,
+          voice_id: voiceId,
           speed: 1.0,
         },
         background: {
@@ -48,6 +51,7 @@ try {
         },
       },
     ],
+
     dimension: dimensions,
     aspect_ratio: ratio,
     test: false,

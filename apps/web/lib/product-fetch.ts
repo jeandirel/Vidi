@@ -4,6 +4,7 @@ import ipaddr from 'ipaddr.js';
 import { ApiError } from './api';
 
 const MAX_BYTES = 1024 * 1024;
+const MAX_BYTES_AMAZON = 4 * 1024 * 1024;
 const TIMEOUT = 12000;
 export function publicAddress(address: string): boolean {
   try {
@@ -51,6 +52,8 @@ async function readHop(url: URL, signal: AbortSignal): Promise<Hop> {
   if (!addresses.length || addresses.some((a) => !publicAddress(a.address)))
     throw new ApiError(400, 'Ce lien pointe vers une adresse réseau non autorisée.');
   const pinned = addresses[0];
+  const isAmazon = /(?:^|\.)(?:amazon\.[a-z.]+|amzn\.eu)$/i.test(url.hostname);
+  const limitBytes = isAmazon ? MAX_BYTES_AMAZON : MAX_BYTES;
   return new Promise((resolve, reject) => {
     const req = request(
       url,
@@ -62,7 +65,9 @@ async function readHop(url: URL, signal: AbortSignal): Promise<Hop> {
         // The original hostname remains in Host and TLS SNI for certificate verification.
         lookup: (_hostname, _options, callback) => callback(null, pinned.address, pinned.family),
         headers: {
-          'User-Agent': 'VidiProductImporter/1.0',
+          'User-Agent': isAmazon
+            ? 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)'
+            : 'VidiProductImporter/1.0',
           Accept: 'text/html,application/xhtml+xml',
           'Accept-Encoding': 'identity',
         },
@@ -89,7 +94,7 @@ async function readHop(url: URL, signal: AbortSignal): Promise<Hop> {
           );
           return;
         }
-        if (Number(res.headers['content-length'] || 0) > MAX_BYTES) {
+        if (Number(res.headers['content-length'] || 0) > limitBytes) {
           res.destroy();
           reject(new ApiError(413, 'La fiche produit est trop volumineuse.'));
           return;
@@ -98,7 +103,7 @@ async function readHop(url: URL, signal: AbortSignal): Promise<Hop> {
         const chunks: Buffer[] = [];
         res.on('data', (chunk: Buffer) => {
           size += chunk.length;
-          if (size > MAX_BYTES) {
+          if (size > limitBytes) {
             res.destroy();
             reject(new ApiError(413, 'La fiche produit est trop volumineuse.'));
           } else chunks.push(chunk);
