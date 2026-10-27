@@ -1,4 +1,4 @@
-import type { ProjectInput } from '@vidi/core';
+import { projectSchema, type ProjectInput } from '@vidi/core';
 
 export type LocalProject = {
   id: string;
@@ -42,20 +42,36 @@ if (!localProjects.has('proj_vimergy_zinc')) {
     reviewStatus: 'APPROVED',
     archivedAt: null,
     createdAt: new Date(),
-    data: {
+    data: projectSchema.parse({
       title: 'VIMERGY Sulfate de Zinc Liquide',
       duration: 15,
       resolution: '1080p',
       aspectRatio: '9:16',
       avatarId: 'lea',
       voiceId: 'claire',
-      script:
-        "Arrêtez les gélules de zinc ! Regardez ça. Le zinc liquide Vimergy est absorbé instantanément par votre corps. Quelques gouttes le matin dans un verre d'eau suffisent pour booster votre immunité et votre peau. Commandez sur Amazon dès maintenant !",
+      language: 'fr',
+      emotion: 'warm',
+      captions: true,
+      subtitleStyle: 'tiktok-punchy',
+      clips: [],
+      product: {
+        name: 'VIMERGY Sulfate de Zinc Liquide',
+        description: 'Gouttes à absorption rapide, 7,5 mg zinc biodisponible, formule pure sans additifs',
+        audience: 'Toute personne cherchant à booster son immunité et sa peau',
+        benefits: ['Absorption sublinguale rapide', '7,5 mg de zinc liquide pur'],
+        image: 'https://m.media-amazon.com/images/I/51vlsYH6xBL._AC_SL1350_.jpg',
+        url: 'https://amzn.eu/d/01EdriCf',
+      },
+      script: {
+        hook: 'Arrêtez les gélules de zinc ! Regardez ça.',
+        body: "Le zinc liquide Vimergy est absorbé instantanément par votre corps. Quelques gouttes le matin dans un verre d'eau suffisent pour booster votre immunité et votre peau.",
+        cta: 'Commandez sur Amazon dès maintenant !',
+      },
       media: {
         kind: 'avatar',
         narration: 'standard',
       },
-    },
+    }),
   });
 }
 

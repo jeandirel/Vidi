@@ -35,16 +35,28 @@ export async function POST(request: Request) {
     checkOrigin(request);
     const input = schema.parse(await jsonBody(request));
     if (input.workspaceId) {
-      await requireWorkspace(input.workspaceId, true);
-      await rateLimit(`scripts:${input.workspaceId}`, 10, 60);
-      await rateLimit(`scripts:daily:${input.workspaceId}`, 100, 86400);
+      await requireWorkspace(input.workspaceId, true, request);
+      if (input.workspaceId !== 'ws_local') {
+        try {
+          await rateLimit(`scripts:${input.workspaceId}`, 10, 60);
+          await rateLimit(`scripts:daily:${input.workspaceId}`, 100, 86400);
+        } catch {
+          /* rate limiter fallback when db is offline */
+        }
+      }
     } else {
       if (!guestScriptsEnabled())
         throw new ApiError(401, 'Connectez-vous pour accéder au générateur de scripts.');
       if (process.env.REDIS_URL || process.env.DATABASE_URL) {
-        await rateLimit('scripts:guest:global', 10, 60);
-        await rateLimit('scripts:guest:day', 100, 86400);
-      } else guestLimit();
+        try {
+          await rateLimit('scripts:guest:global', 10, 60);
+          await rateLimit('scripts:guest:day', 100, 86400);
+        } catch {
+          /* rate limiter fallback */
+        }
+      } else {
+        guestLimit();
+      }
     }
     return Response.json(await generateScript(input));
   } catch (error) {

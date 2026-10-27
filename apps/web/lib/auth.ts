@@ -1,10 +1,11 @@
 import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 import { cookies } from 'next/headers';
-import { db, Role, Prisma, type Workspace } from '@vidi/db';
+import { db, Role, Prisma } from '@vidi/db';
 import { ApiError, needsDatabase } from './api';
 import { rateLimit } from './rate-limit';
 
+export type Workspace = Prisma.WorkspaceGetPayload<Record<string, never>>;
 export type AuthUser = Prisma.UserGetPayload<{
   include: { memberships: { include: { workspace: true } } };
 }>;
