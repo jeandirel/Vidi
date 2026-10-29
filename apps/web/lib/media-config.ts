@@ -7,6 +7,17 @@ export function mediaConfigured() {
     storageConfigured()
   );
 }
+export function openShortsConfigured() {
+  return !!(
+    process.env.OPENSHORTS_API_URL &&
+    process.env.OPENSHORTS_SERVICE_TOKEN &&
+    process.env.OPENSHORTS_FAL_KEY &&
+    process.env.OPENSHORTS_ELEVENLABS_KEY &&
+    process.env.DATABASE_URL &&
+    process.env.REDIS_URL &&
+    storageConfigured()
+  );
+}
 export function videoConfigured() {
   // All actual renders are dispatched through the durable queue; no fire-and-forget.
   if (!process.env.DATABASE_URL || !process.env.REDIS_URL) return false;
@@ -18,6 +29,7 @@ export function videoConfigured() {
   );
   return (
     omniReady ||
+    openShortsConfigured() ||
     !!process.env.HEYGEN_API_KEY ||
     mediaConfigured() ||
     !!(

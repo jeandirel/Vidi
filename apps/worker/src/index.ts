@@ -6,16 +6,23 @@ import { executeMedia, lockVoiceConsent } from './media';
 import { createVoiceWorker } from './voices';
 import { generateHeyGenVideo } from './providers/heygen';
 import { createUgcRender } from './providers/ugc';
+import { createOpenShortsRender } from './providers/openshorts';
 
 const required = ['DATABASE_URL', 'REDIS_URL'] as const;
 for (const key of required) if (!process.env[key]) throw new Error(`Missing configuration: ${key}`);
 const heygen = !!process.env.HEYGEN_API_KEY;
 const omni = !!(process.env.GEMINI_API_KEY && process.env.S3_BUCKET && process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY);
 const native = !!(process.env.MEDIA_GATEWAY_URL && process.env.MEDIA_GATEWAY_TOKEN);
+const openshorts = !!(
+  process.env.OPENSHORTS_API_URL && process.env.OPENSHORTS_SERVICE_TOKEN &&
+  process.env.OPENSHORTS_FAL_KEY && process.env.OPENSHORTS_ELEVENLABS_KEY &&
+  process.env.S3_BUCKET
+);
 if (
   !heygen &&
   !omni &&
   !native &&
+  !openshorts &&
   (!process.env.VIDEO_GATEWAY_URL ||
     !process.env.VIDEO_GATEWAY_TOKEN ||
     !process.env.VIDEO_OUTPUT_HOSTS)
@@ -100,7 +107,16 @@ const worker = new Worker<{ renderId: string }>(
     try {
       const input = projectSchema.parse(render.input);
       await db.render.update({ where: { id: render.id }, data: { status: 'PROCESSING' } });
-      if (omni && (input.media?.kind !== 'avatar' || heygen)) {
+      if (openshorts && input.media?.kind === 'avatar') {
+        const output = await createOpenShortsRender(render.id, render.workspaceId, input);
+        const asset = await db.asset.upsert({
+          where: { key: output.key }, create: output, update: output,
+        });
+        await db.render.update({
+          where: { id: render.id },
+          data: { status: 'COMPLETED', outputAssetId: asset.id, error: null },
+        });
+      } else if (omni && (input.media?.kind !== 'avatar' || heygen)) {
         const output = await createUgcRender(render.id, render.workspaceId, input);
         const asset = await db.asset.upsert({
           where: { key: output.key }, create: output, update: output,

@@ -4,7 +4,7 @@ import { canRender, plans, projectSchema, renderCost, type ProjectInput } from '
 import { requireWorkspace } from '@/lib/auth';
 import { ApiError, checkOrigin, errorResponse, jsonBody } from '@/lib/api';
 import { renderQueue } from '@/lib/queue';
-import { mediaConfigured, mediaCapabilities, videoConfigured } from '@/lib/media-config';
+import { mediaConfigured, mediaCapabilities, openShortsConfigured, videoConfigured } from '@/lib/media-config';
 import { rateLimit } from '@/lib/rate-limit';
 import { localProjects, localRenders, type LocalRender } from '@/lib/local-store';
 
@@ -127,13 +127,26 @@ export async function POST(request: Request) {
 
     // Do not silently substitute a generic voice for a requested clone.
     if (snapshot.media?.narration === 'clone' &&
-        (process.env.GEMINI_API_KEY || process.env.HEYGEN_API_KEY))
+        (process.env.GEMINI_API_KEY || process.env.HEYGEN_API_KEY || openShortsConfigured()))
       throw new ApiError(422, 'Le clonage vocal nécessite le moteur local autorisé, sans route fournisseur externe.');
-    if (snapshot.media?.kind === 'avatar' && !process.env.HEYGEN_API_KEY && !mediaConfigured())
+    if (snapshot.media?.kind === 'avatar' && !process.env.HEYGEN_API_KEY && !mediaConfigured() && !openShortsConfigured())
       throw new ApiError(422, 'Ajoutez HEYGEN_API_KEY ou connectez un moteur avatar compatible.');
 
 
-    if (mediaConfigured() && !process.env.GEMINI_API_KEY && !process.env.HEYGEN_API_KEY) {
+    if (openShortsConfigured() && snapshot.media?.kind === 'avatar') {
+      if (snapshot.duration !== 30 || snapshot.aspectRatio !== '9:16' ||
+          snapshot.resolution === '4k')
+        throw new ApiError(422, 'OpenShorts accepte ici uniquement 30 s, vertical 9:16, jusqu’à 1080p.');
+      if (snapshot.script.hook.concat(' ', snapshot.script.body, ' ', snapshot.script.cta)
+          .trim().split(/\s+/).length > 70)
+        throw new ApiError(422, 'Script trop long : maximum 70 mots pour le moteur OpenShorts.');
+    }
+    if (openShortsConfigured() && snapshot.media?.kind !== 'avatar' &&
+        !process.env.GEMINI_API_KEY && !process.env.HEYGEN_API_KEY && !mediaConfigured() &&
+        !(process.env.VIDEO_GATEWAY_URL && process.env.VIDEO_GATEWAY_TOKEN))
+      throw new ApiError(422, 'Le moteur OpenShorts ne prend en charge ici que les projets avatar.');
+    if (mediaConfigured() && !process.env.GEMINI_API_KEY && !process.env.HEYGEN_API_KEY &&
+        !(openShortsConfigured() && snapshot.media?.kind === 'avatar')) {
       const engines = await mediaCapabilities();
       if (!engines)
         throw new ApiError(503, 'Le serveur média est indisponible. Aucun crédit utilisé.');
