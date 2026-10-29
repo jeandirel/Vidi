@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { campaignSchema, scriptSchema } from './campaign';
 export * from './campaign';
+export * from './openshorts';
 
 export const productSchema = z.object({
   name: z.string().trim().min(2).max(120),
