@@ -201,19 +201,9 @@ export async function POST(request: Request) {
         };
       } catch (dbErr) {
         if (dbErr instanceof ApiError) throw dbErr;
-        const renderId = `render_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-        render = {
-          id: renderId,
-          workspaceId: workspace.id,
-          projectId: input.projectId,
-          status: 'PROCESSING',
-          credits: cost,
-          outputUrl: null,
-          outputAssetId: null,
-          error: null,
-          createdAt: new Date(),
-        };
-        localRenders.set(renderId, { ...render, idempotencyKey: input.idempotencyKey } as LocalRender);
+        // Never claim a render was queued when neither the credit reservation
+        // nor the durable job was persisted.
+        throw new ApiError(503, 'La base de données est indisponible. Aucun rendu lancé.');
       }
     }
 
