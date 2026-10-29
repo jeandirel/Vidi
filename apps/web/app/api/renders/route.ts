@@ -125,6 +125,14 @@ export async function POST(request: Request) {
 
     if (!snapshot) throw new ApiError(404, 'Projet introuvable.');
 
+    // Do not silently substitute a generic voice for a requested clone.
+    if (snapshot.media?.narration === 'clone' &&
+        (process.env.GEMINI_API_KEY || process.env.HEYGEN_API_KEY))
+      throw new ApiError(422, 'Le clonage vocal nécessite le moteur local autorisé, sans route fournisseur externe.');
+    if (snapshot.media?.kind === 'avatar' && !process.env.HEYGEN_API_KEY && !mediaConfigured())
+      throw new ApiError(422, 'Ajoutez HEYGEN_API_KEY ou connectez un moteur avatar compatible.');
+
+
     if (mediaConfigured() && !process.env.GEMINI_API_KEY && !process.env.HEYGEN_API_KEY) {
       const engines = await mediaCapabilities();
       if (!engines)
