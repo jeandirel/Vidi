@@ -138,7 +138,7 @@ export async function POST(request: Request) {
           snapshot.resolution === '4k')
         throw new ApiError(422, 'OpenShorts accepte ici uniquement 30 s, vertical 9:16, jusqu’à 1080p.');
       if (snapshot.script.hook.concat(' ', snapshot.script.body, ' ', snapshot.script.cta)
-          .trim().split(/\\s+/).length > 70)
+          .trim().split(/\s+/).length > 70)
         throw new ApiError(422, 'Script trop long : maximum 70 mots pour le moteur OpenShorts.');
     }
     if (openShortsConfigured() && snapshot.media?.kind !== 'avatar' &&
