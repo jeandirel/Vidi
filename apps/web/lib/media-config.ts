@@ -8,14 +8,22 @@ export function mediaConfigured() {
   );
 }
 export function videoConfigured() {
+  // All actual renders are dispatched through the durable queue; no fire-and-forget.
+  if (!process.env.DATABASE_URL || !process.env.REDIS_URL) return false;
+  const omniReady = !!(
+    process.env.GEMINI_API_KEY &&
+    process.env.S3_BUCKET &&
+    process.env.AWS_ACCESS_KEY_ID &&
+    process.env.AWS_SECRET_ACCESS_KEY
+  );
   return (
+    omniReady ||
     !!process.env.HEYGEN_API_KEY ||
     mediaConfigured() ||
     !!(
       process.env.VIDEO_GATEWAY_URL &&
       process.env.VIDEO_GATEWAY_TOKEN &&
-      process.env.VIDEO_OUTPUT_HOSTS &&
-      process.env.REDIS_URL
+      process.env.VIDEO_OUTPUT_HOSTS
     )
   );
 }
