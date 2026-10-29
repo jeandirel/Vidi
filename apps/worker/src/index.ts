@@ -10,7 +10,7 @@ import { createUgcRender } from './providers/ugc';
 const required = ['DATABASE_URL', 'REDIS_URL'] as const;
 for (const key of required) if (!process.env[key]) throw new Error(`Missing configuration: ${key}`);
 const heygen = !!process.env.HEYGEN_API_KEY;
-const omni = !!process.env.GEMINI_API_KEY;
+const omni = !!(process.env.GEMINI_API_KEY && process.env.S3_BUCKET && process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY);
 const native = !!(process.env.MEDIA_GATEWAY_URL && process.env.MEDIA_GATEWAY_TOKEN);
 if (
   !heygen &&
