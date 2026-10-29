@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { db, Prisma } from '@vidi/db';
-import { canRender, plans, projectSchema, renderCost, generateHeyGenVideo, type ProjectInput } from '@vidi/core';
+import { canRender, plans, projectSchema, renderCost, type ProjectInput } from '@vidi/core';
 import { requireWorkspace } from '@/lib/auth';
 import { ApiError, checkOrigin, errorResponse, jsonBody } from '@/lib/api';
 import { renderQueue } from '@/lib/queue';
@@ -100,6 +100,9 @@ export async function POST(request: Request) {
         'Le moteur vidéo doit être connecté avant de lancer un rendu. Aucun crédit n’a été utilisé.',
       );
 
+    if (!process.env.DATABASE_URL || workspace.id === 'ws_local')
+      throw new ApiError(503, 'Le moteur de rendu nécessite une base PostgreSQL et un workspace cloud.');
+
     // Fetch project data
     let snapshot: ProjectInput | null = null;
     const localProj = localProjects.get(input.projectId);
@@ -122,7 +125,7 @@ export async function POST(request: Request) {
 
     if (!snapshot) throw new ApiError(404, 'Projet introuvable.');
 
-    if (mediaConfigured()) {
+    if (mediaConfigured() && !process.env.GEMINI_API_KEY && !process.env.HEYGEN_API_KEY) {
       const engines = await mediaCapabilities();
       if (!engines)
         throw new ApiError(503, 'Le serveur média est indisponible. Aucun crédit utilisé.');
@@ -214,61 +217,14 @@ export async function POST(request: Request) {
       }
     }
 
-    // Direct HeyGen execution
-    if (process.env.HEYGEN_API_KEY) {
-      void (async () => {
-        try {
-          const cur = localRenders.get(render.id);
-          if (cur) cur.status = 'PROCESSING';
-          try {
-            await db.render.update({
-              where: { id: render.id },
-              data: { status: 'PROCESSING' },
-            });
-          } catch {
-            /* ignore db offline */
-          }
+    // Video generation must run in a persistent worker, not an unawaited
+    // Promise inside a serverless HTTP request.
+    if (!process.env.DATABASE_URL || workspace.id === 'ws_local')
+      throw new ApiError(503, 'Rendu cloud indisponible sans base de données.');
+    if (!process.env.REDIS_URL)
+      throw new ApiError(503, 'Rendu cloud indisponible sans Redis BullMQ.');
 
-          const result = await generateHeyGenVideo({
-            project: snapshot,
-            apiKey: process.env.HEYGEN_API_KEY!,
-          });
-
-          if (cur) {
-            cur.status = 'COMPLETED';
-            cur.outputUrl = result.videoUrl;
-          }
-          try {
-            await db.render.update({
-              where: { id: render.id },
-              data: { status: 'COMPLETED', outputUrl: result.videoUrl, error: null },
-            });
-          } catch {
-            /* ignore db offline */
-          }
-        } catch (err: unknown) {
-          const message = err instanceof Error ? err.message : 'La génération HeyGen a échoué.';
-          console.error('HeyGen generation error:', message);
-          const cur = localRenders.get(render.id);
-          if (cur) {
-            cur.status = 'FAILED';
-            cur.error = message;
-          }
-          try {
-            await db.render.update({
-              where: { id: render.id },
-              data: { status: 'FAILED', error: message },
-            });
-          } catch {
-            /* ignore db offline */
-          }
-        }
-      })();
-
-      return Response.json({ ...render, dispatchPending: false }, { status: 202 });
-    }
-
-    // BullMQ fallback if HeyGen is not configured
+    // Durable BullMQ dispatch for ALL providers
     const queue = renderQueue();
     let dispatchPending = false;
     try {
