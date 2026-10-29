@@ -89,6 +89,7 @@ model Render {
   status RenderStatus @default(QUEUED)
   outputUrl String?
   outputAssetId String?
+  providerJobId String?
   error String?
   ledger CreditEntry[]
   createdAt DateTime @default(now())
