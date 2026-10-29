@@ -77,6 +77,7 @@ async function googleScene(project: ProjectInput, imageData: string): Promise<Bu
     return res.json() as Promise<{
       id?: string; status?: string; output_video?: { data?: string };
       error?: { message?: string };
+      steps?: Array<{ type?: string; content?: Array<{ type?: string; mime_type?: string; data?: string }> }>;
     }>;
   }
   let result = await call(GOOGLE_ENDPOINT, {
@@ -94,7 +95,10 @@ async function googleScene(project: ProjectInput, imageData: string): Promise<Bu
   }
   if (result.status === 'failed' || result.status === 'cancelled')
     throw new Error('Google video generation failed');
-  const encoded = result.output_video?.data;
+  // REST returns video in steps[].content[]; output_video is only a JS SDK convenience field.
+  const encoded = result.output_video?.data ||
+    result.steps?.flatMap((step) => step.content || [])
+      .find((part) => part.type === 'video' && part.mime_type === 'video/mp4')?.data;
   if (!encoded || encoded.length > MAX_VIDEO_BYTES * 1.4)
     throw new Error('Google did not return a supported inline video');
   const bytes = Buffer.from(encoded, 'base64');
@@ -219,7 +223,7 @@ export async function createUgcRender(
     const audio = !avatar ? await elevenVoice(narration(project)) : null;
     const audioFile = join(folder, 'narration.mp3');
     if (audio) await writeFile(audioFile, audio);
-    const imageFile = join(folder, match?.[1] === 'png' ? 'product.png' : 'product.jpg');
+    const imageFile = join(folder, 'product.' + (match?.[1] === 'png' ? 'png' : match?.[1] === 'webp' ? 'webp' : 'jpg'));
     if (image) await writeFile(imageFile, image);
     const srt = join(folder, 'captions.srt');
     await writeCaptions(project, srt);
