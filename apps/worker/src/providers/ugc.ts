@@ -3,12 +3,12 @@
  * Runs ONLY inside the durable BullMQ worker, never in a Vercel request.
  * Provider calls are paid; a render ID reuses an already-uploaded output on retry.
  */
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { execFile } from 'node:child_process';
-import { GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { HeadObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import type { ProjectInput } from '@vidi/core';
 import { db } from '@vidi/db';
 import { productImage } from '../image';
@@ -203,7 +203,7 @@ export async function createUgcRender(
   }
   const folder = await mkdtemp(join(tmpdir(), 'vidi-ugc-'));
   try {
-    const avatar = (project.media?.kind === 'avatar' || !project.media) && !!process.env.HEYGEN_API_KEY;
+    const avatar = project.media?.kind === 'avatar' && !!process.env.HEYGEN_API_KEY;
     const validImage = project.product.image ? await productImage(project.product.image) : '';
     const match = /^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/=]+)$/.exec(validImage);
     const image = match ? Buffer.from(match[2], 'base64') : null;
@@ -234,7 +234,7 @@ export async function createUgcRender(
       '-map', '[outv]', '-map', avatar ? '0:a?' : audio ? '1:a' : '0:a?',
       '-t', String(project.duration), '-c:v', 'libx264', '-preset', 'veryfast',
       '-crf', '23', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '128k',
-      '-movflags', '+faststart', '-shortest', output,
+      '-movflags', '+faststart', output,
     ], { timeout: 600000, maxBuffer: 1024 * 1024 });
     const mp4 = await readFile(output);
     if (mp4.length < 2048 || mp4.length > 100 * 1024 * 1024)
